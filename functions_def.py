@@ -102,6 +102,51 @@ def get_altitude(row_index, string_array, numeric_array):
 
     return altitude_value
 
+def find_multiple_phase_transitions(numeric_column, tolerance=1e-2):
+    """
+    Generalized function to detect multiple constant phases followed by a transition to decreasing values.
+    
+    Parameters:
+    - numeric_column: np.ndarray : 1D NumPy array representing a column of numeric values.
+    - tolerance: float : A small value to account for floating-point comparison issues (default: 1e-2).
+
+    Returns:
+    - transition_indices: List[int] : List of indices where transitions between constant values occur.
+    - constant_values: List[float] : List of constant values for each phase.
+    """
+    transition_indices = []
+    constant_values = []
+
+    # Step 1: Start by assuming the first value is the first constant phase
+    current_constant_value = numeric_column[0]
+    constant_values.append(current_constant_value)
+
+    phase_started = False
+
+    for i in range(1, len(numeric_column)):
+        # Detect if a new phase starts (a decrease from the current constant phase)
+        if abs(numeric_column[i] - current_constant_value) > tolerance:
+            # If the value decreases, we enter a new phase
+            if numeric_column[i] < current_constant_value:
+                # Mark the transition point (new constant phase)
+                transition_indices.append(i)
+                current_constant_value = numeric_column[i]
+                constant_values.append(current_constant_value)
+
+                # Now, we are in a new phase, and it may also decrease again
+                phase_started = True
+            else:
+                # If the value doesn't decrease, ignore it (no valid transition)
+                phase_started = False
+        else:
+            # We are still in the current constant phase
+            phase_started = True
+
+    # If no final decreasing phase is found, just return the collected transitions
+    return transition_indices, constant_values
+
+
+
 if __name__ == "__main__":
     file_path = '/home/fabiomeloni/flight_safety/traiettoria.xlsx'
     
