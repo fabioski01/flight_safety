@@ -68,7 +68,7 @@ def find_first_and_last_nonzero(numeric_column):
     
     return first_index, last_index, first_value, last_value
 
-def get_time(row_index):
+def get_time(row_index, string_array, numeric_array):
     """
     Function to find the time of an event given its row index.
     
@@ -79,8 +79,11 @@ def get_time(row_index):
     - event_time: float: timestamp of the event
     """    
     # Specify the column name to find timestamp column
-    column_name = "thrust~Engine_1_Up:Rocket"
+    column_name = "flight_time"
     time_col_index = find_column_index(string_array, column_name)
+    time_value = numeric_array[row_index, time_col_index]
+
+    return time_value
 
 if __name__ == "__main__":
     file_path = '/home/fabiomeloni/flight_safety/traiettoria.xlsx'
@@ -103,3 +106,7 @@ if __name__ == "__main__":
     # Print the results
     print(f"First non-zero value at row index: {first_index + 5}, value: {first_value}")
     print(f"Last non-zero value at row index: {last_index + 5}, value: {last_value}")
+
+    # get time, altitude, state vector
+    ignition_s1_time = get_time(first_index)
+    print(f"Index of S1 ignition {first_index + 5}, value: {ignition_s1_time}")
