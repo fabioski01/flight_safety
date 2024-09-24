@@ -1,27 +1,33 @@
 import pandas as pd
 import numpy as np
 
-# def load_excel_as_two_arrays(file_path):
-#     """
-#     Function to load an Excel file as two arrays:
-#     1. One for rows 1 to 4 as strings.
-#     2. One for rows 5 onwards as floats.
+def load_excel_as_two_arrays(file_path):
+    """
+    Function to load an Excel file as two arrays:
+    1. One for rows 1 to 4 as strings.
+    2. One for rows 5 onwards as floats.
     
-#     Parameters:
-#     - file_path: str : Path to the Excel file
+    Parameters:
+    - file_path: str : Path to the Excel file
     
-#     Returns:
-#     - string_array: np.ndarray : NumPy array containing the first 4 rows as strings
-#     - numeric_array: np.ndarray : NumPy array containing the data from row 5 onwards as floats
-#     """
-#     df = pd.read_excel(file_path, header=None)
-#     string_part = df.iloc[:4, :]  # Rows 1 to 4 (index 0 to 3)
-#     numeric_part = df.iloc[4:, :]  # Rows 5 onwards (index 4 onwards)
+    Returns:
+    - string_array: np.ndarray : NumPy array containing the first 4 rows as strings
+    - numeric_array: np.ndarray : NumPy array containing the data from row 5 onwards as floats
+    """
+    # Load the entire Excel file into a pandas DataFrame (do not specify dtype yet)
+    df = pd.read_excel(file_path, header=None)
     
-#     string_array = string_part.to_numpy(dtype=str)
-#     numeric_array = numeric_part.apply(pd.to_numeric, errors='coerce').to_numpy(dtype=float)
+    # Split the DataFrame into two parts
+    string_part = df.iloc[:4, :]  # Rows 1 to 4 (index 0 to 3)
+    numeric_part = df.iloc[4:, :]  # Rows 5 onwards (index 4 onwards)
+    
+    # Convert the string part to a NumPy array (keep as strings)
+    string_array = string_part.to_numpy(dtype=str)
 
-#     return string_array, numeric_array
+    # Convert the numeric part to a NumPy array of floats, coerce errors to NaN
+    numeric_array = numeric_part.apply(pd.to_numeric, errors='coerce').to_numpy(dtype=float)
+
+    return string_array, numeric_array
 
 def find_column_index(string_array, column_name):
     """
@@ -34,6 +40,7 @@ def find_column_index(string_array, column_name):
     Returns:
     - col_index: int : The index of the column (if found)
     """
+    
     row_2 = string_array[1, :]  # Row 2 corresponds to index 1
     try:
         col_index = np.where(row_2 == column_name)[0][0]  # Find the first match
@@ -41,12 +48,14 @@ def find_column_index(string_array, column_name):
     except IndexError:
         raise ValueError(f"Column '{column_name}' not found in row 2.")
 
-def find_first_and_last_nonzero(numeric_column):
+def find_first_and_last_nonzero(column_name, string_array, numeric_array):
     """
     Function to find the first and last non-zero values in a numeric column.
     
     Parameters:
-    - numeric_column: np.ndarray : 1D NumPy array representing a column of numeric values
+    - column_name: string : name of the column to look into.
+    - string_array: np.ndarray : NumPy array containing string data (first 4 rows)
+    - numeric_array: np.ndarray : NumPy array containing the data from row 5 onwards as floats
     
     Returns:
     - first_index: int : Index of the first non-zero value
@@ -54,6 +63,13 @@ def find_first_and_last_nonzero(numeric_column):
     - first_value: float : First non-zero value
     - last_value: float : Last non-zero value
     """
+
+    # Find the index of the specified column in the string array (row 2)
+    col_index = find_column_index(string_array, column_name)
+
+    # Extract the corresponding column from the numeric array
+    numeric_column = numeric_array[:, col_index]
+
     # Find indices where the values are non-zero
     non_zero_indices = np.nonzero(numeric_column)[0]
     
@@ -74,6 +90,8 @@ def get_time(row_index, string_array, numeric_array):
     
     Parameters:
     - row_index: int : index representing the row number which contains the event value
+    - string_array: np.ndarray : NumPy array containing string data (first 4 rows)
+    - numeric_array: np.ndarray : NumPy array containing the data from row 5 onwards as floats
     
     Returns:
     - event_time: float: timestamp of the event
@@ -91,6 +109,8 @@ def get_altitude(row_index, string_array, numeric_array):
     
     Parameters:
     - row_index: int : index representing the row number which contains the event value
+    - string_array: np.ndarray : NumPy array containing string data (first 4 rows)
+    - numeric_array: np.ndarray : NumPy array containing the data from row 5 onwards as floats
     
     Returns:
     - event_time: float: ALTITUDE of the event
@@ -102,18 +122,27 @@ def get_altitude(row_index, string_array, numeric_array):
 
     return altitude_value
 
-def find_multiple_phase_transitions(numeric_column, tolerance=1e-2):
+def find_multiple_phase_transitions(column_name, string_array, numeric_array, tolerance=1e-2):
     """
     Generalized function to detect multiple constant phases followed by a transition to decreasing values.
     
     Parameters:
-    - numeric_column: np.ndarray : 1D NumPy array representing a column of numeric values.
+    - column_name: string : name of the column to look into.
+    - string_array: np.ndarray : NumPy array containing string data (first 4 rows)
+    - numeric_array: np.ndarray : NumPy array containing the data from row 5 onwards as floats
     - tolerance: float : A small value to account for floating-point comparison issues (default: 1e-2).
 
     Returns:
     - transition_indices: List[int] : List of indices where transitions between constant values occur.
     - constant_values: List[float] : List of constant values for each phase.
     """
+
+    # Find the index of the specified column in the string array (row 2)
+    col_index = find_column_index(string_array, column_name)
+
+    # Extract the corresponding column from the numeric array
+    numeric_column = numeric_array[:, col_index]
+
     transition_indices = []
     constant_values = []
 
@@ -145,8 +174,33 @@ def find_multiple_phase_transitions(numeric_column, tolerance=1e-2):
     # If no final decreasing phase is found, just return the collected transitions
     return transition_indices, constant_values
 
+def find_max(column_name, string_array, numeric_array):
+    """
+    Function to find the maximum value in a numeric column and its index.
+    
+    Parameters:
+    - column_name: string : name of the column to look into.
+    - string_array: np.ndarray : NumPy array containing string data (first 4 rows)
+    - numeric_array: np.ndarray : NumPy array containing the data from row 5 onwards as floats
+
+    Returns:
+    - max_index: int : The index of the maximum value in the column.
+    - max_value: float : The maximum value in the column.
+    """
+
+    # Find the index of the specified column in the string array (row 2)
+    col_index = find_column_index(string_array, column_name)
+
+    # Extract the corresponding column from the numeric array
+    numeric_column = numeric_array[:, col_index]
+
+    max_value = np.max(numeric_column)  # Find the maximum value
+    max_index = np.argmax(numeric_column)  # Find the index of the maximum value
+    
+    return max_index, max_value
 
 
+# example of usage
 if __name__ == "__main__":
     file_path = '/home/fabiomeloni/flight_safety/traiettoria.xlsx'
     
