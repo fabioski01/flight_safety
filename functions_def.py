@@ -85,6 +85,23 @@ def get_time(row_index, string_array, numeric_array):
 
     return time_value
 
+def get_altitude(row_index, string_array, numeric_array):
+    """
+    Function to find the altitude of an event given its row index.
+    
+    Parameters:
+    - row_index: int : index representing the row number which contains the event value
+    
+    Returns:
+    - event_time: float: ALTITUDE of the event
+    """    
+    # Specify the column name to find ALTITUDE column
+    column_name = "altitude~Rocket@Earth" # Altitude of Rocket at Earth
+    altitude_col_index = find_column_index(string_array, column_name)
+    altitude_value = numeric_array[row_index, altitude_col_index]
+
+    return altitude_value
+
 if __name__ == "__main__":
     file_path = '/home/fabiomeloni/flight_safety/traiettoria.xlsx'
     
