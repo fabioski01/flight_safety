@@ -199,14 +199,28 @@ def find_max(column_name, string_array, numeric_array):
     
     return max_index, max_value
 
-def get_state_vector(row_index, string_array, numeric_array):
+import csv
+
+# Initialize a list to store state vectors and event names
+state_vectors_list = []
+
+def reset_state_vectors():
     """
-    Function to find the state vector (x, y, z position and velocity) of an event given its row index.
+    Function to reset the state vectors list before collecting new data.
+    """
+    global state_vectors_list
+    state_vectors_list = []  # Clear the list
+
+def get_state_vector(row_index, string_array, numeric_array, event_name):
+    """
+    Function to find the state vector (x, y, z position and velocity) of an event given its row index,
+    and append it to a global list for later saving to a CSV file.
     
     Parameters:
     - row_index: int : Index representing the row number which contains the event value.
     - string_array: np.ndarray : NumPy array containing string data (first 4 rows).
     - numeric_array: np.ndarray : NumPy array containing the data from row 5 onwards as floats.
+    - column_name: str : The name of the event/column to include in the list.
     
     Returns:
     - state_vector: np.ndarray : 1x6 NumPy array containing [x, y, z, vx, vy, vz].
@@ -227,32 +241,54 @@ def get_state_vector(row_index, string_array, numeric_array):
     # Combine position and velocity values into a single 1x6 array
     state_vector = np.hstack((position_values, velocity_values))
 
+    # Append the state vector and event name to the global list
+    state_vectors_list.append(np.append(state_vector, event_name).tolist())  # Convert to list
+
     return state_vector
 
+def save_state_vectors_to_csv(output_csv_path):
+    """
+    Save all the state vectors and corresponding event names stored in the list to a CSV file.
+    
+    Parameters:
+    - output_csv_path: str : Path to save the state vector list to a CSV file.
+    """
+    # Specify the header
+    header = ["x", "y", "z", "vx", "vy", "vz", "event_column"]
+    
+    # Open the file in write mode and write the data
+    with open(output_csv_path, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        # Write the header
+        writer.writerow(header)
+        # Write the state vectors and event names
+        writer.writerows(state_vectors_list)
 
-# example of usage
-if __name__ == "__main__":
-    file_path = '/home/fabiomeloni/flight_safety/traiettoria.xlsx'
-    
-    # Load the Excel file as two separate arrays
-    string_array, numeric_array = load_excel_as_two_arrays(file_path)
-    
-    # Specify the column name you are looking for
-    column_name = "thrust~Engine_1_Up:Rocket"
-    
-    # Find the index of the specified column in the string array (row 2)
-    col_index = find_column_index(string_array, column_name)
-    
-    # Extract the corresponding column from the numeric array
-    numeric_column = numeric_array[:, col_index]
-    
-    # Find the first and last non-zero values in the numeric column
-    first_index, last_index, first_value, last_value = find_first_and_last_nonzero(numeric_column)
-    
-    # Print the results
-    print(f"First non-zero value at row index: {first_index + 5}, value: {first_value}")
-    print(f"Last non-zero value at row index: {last_index + 5}, value: {last_value}")
+    print(f"All state vectors saved to {output_csv_path}")
 
-    # get time, altitude, state vector
-    ignition_s1_time = get_time(first_index)
-    print(f"Index of S1 ignition {first_index + 5}, value: {ignition_s1_time}")
+# # example of usage
+# if __name__ == "__main__":
+#     file_path = '/home/fabiomeloni/flight_safety/traiettoria.xlsx'
+    
+#     # Load the Excel file as two separate arrays
+#     string_array, numeric_array = load_excel_as_two_arrays(file_path)
+    
+#     # Specify the column name you are looking for
+#     column_name = "thrust~Engine_1_Up:Rocket"
+    
+#     # Find the index of the specified column in the string array (row 2)
+#     col_index = find_column_index(string_array, column_name)
+    
+#     # Extract the corresponding column from the numeric array
+#     numeric_column = numeric_array[:, col_index]
+    
+#     # Find the first and last non-zero values in the numeric column
+#     first_index, last_index, first_value, last_value = find_first_and_last_nonzero(numeric_column)
+    
+#     # Print the results
+#     print(f"First non-zero value at row index: {first_index + 5}, value: {first_value}")
+#     print(f"Last non-zero value at row index: {last_index + 5}, value: {last_value}")
+
+#     # get time, altitude, state vector
+#     ignition_s1_time = get_time(first_index)
+#     print(f"Index of S1 ignition {first_index + 5}, value: {ignition_s1_time}")
