@@ -199,6 +199,36 @@ def find_max(column_name, string_array, numeric_array):
     
     return max_index, max_value
 
+def get_state_vector(row_index, string_array, numeric_array):
+    """
+    Function to find the state vector (x, y, z position and velocity) of an event given its row index.
+    
+    Parameters:
+    - row_index: int : Index representing the row number which contains the event value.
+    - string_array: np.ndarray : NumPy array containing string data (first 4 rows).
+    - numeric_array: np.ndarray : NumPy array containing the data from row 5 onwards as floats.
+    
+    Returns:
+    - state_vector: np.ndarray : 1x6 NumPy array containing [x, y, z, vx, vy, vz].
+    """
+    
+    # Define column names for position and velocity components
+    position_columns = ["x~Rocket#J2000@Earth", "y~Rocket#J2000@Earth", "z~Rocket#J2000@Earth"]
+    velocity_columns = ["vx~Rocket#J2000@Earth", "vy~Rocket#J2000@Earth", "vz~Rocket#J2000@Earth"]
+
+    # Find the indices for position and velocity columns
+    position_indices = [find_column_index(string_array, col_name) for col_name in position_columns]
+    velocity_indices = [find_column_index(string_array, col_name) for col_name in velocity_columns]
+
+    # Extract the position and velocity values for the given row index
+    position_values = numeric_array[row_index, position_indices]
+    velocity_values = numeric_array[row_index, velocity_indices]
+
+    # Combine position and velocity values into a single 1x6 array
+    state_vector = np.hstack((position_values, velocity_values))
+
+    return state_vector
+
 
 # example of usage
 if __name__ == "__main__":
