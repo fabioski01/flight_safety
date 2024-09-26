@@ -220,31 +220,34 @@ def get_state_vector(row_index, string_array, numeric_array, event_name):
     - row_index: int : Index representing the row number which contains the event value.
     - string_array: np.ndarray : NumPy array containing string data (first 4 rows).
     - numeric_array: np.ndarray : NumPy array containing the data from row 5 onwards as floats.
-    - column_name: str : The name of the event/column to include in the list.
+    - event_name: str : The name of the event/column to include in the list.
     
     Returns:
     - state_vector: np.ndarray : 1x6 NumPy array containing [x, y, z, vx, vy, vz].
     """
     
-    # Define column names for position and velocity components
-    position_columns = ["x~Rocket#J2000@Earth", "y~Rocket#J2000@Earth", "z~Rocket#J2000@Earth"]
-    velocity_columns = ["vx~Rocket#J2000@Earth", "vy~Rocket#J2000@Earth", "vz~Rocket#J2000@Earth"]
+    # Define column names for position, velocity, and flight time
+    position_columns = ["x~Rocket#J2000@Earth", "y~Rocket#J2000@Earth", "z~Rocket#J2000@Earth"]  # km
+    velocity_columns = ["vx~Rocket#J2000@Earth", "vy~Rocket#J2000@Earth", "vz~Rocket#J2000@Earth"]  # km/s
+    flight_time_column = "flight_time"  # Column for flight time in seconds
 
-    # Find the indices for position and velocity columns
+    # Find the indices for position, velocity, and flight time columns
     position_indices = [find_column_index(string_array, col_name) for col_name in position_columns]
     velocity_indices = [find_column_index(string_array, col_name) for col_name in velocity_columns]
+    flight_time_index = find_column_index(string_array, flight_time_column)
 
-    # Extract the position and velocity values for the given row index
-    position_values = numeric_array[row_index, position_indices]
-    velocity_values = numeric_array[row_index, velocity_indices]
+    # Extract the position, velocity, and flight time values for the given row index
+    position_values = numeric_array[row_index, position_indices]  # Position in km
+    velocity_values = numeric_array[row_index, velocity_indices]  # Velocity in km/s
+    flight_time = numeric_array[row_index, flight_time_index]  # Flight time in seconds
 
-    # Combine position and velocity values into a single 1x6 array
-    state_vector = np.hstack((position_values, velocity_values))
+    # Combine flight time, position, and velocity into a single array
+    state_vector_with_time = np.hstack((flight_time, position_values, velocity_values))
 
-    # Append the state vector and event name to the global list
-    state_vectors_list.append(np.append(state_vector, event_name).tolist())  # Convert to list
+    # Append the state vector with flight time and event name to the global list
+    state_vectors_list.append(np.append(state_vector_with_time, event_name).tolist())  # Convert to list
 
-    return state_vector
+    return state_vector_with_time
 
 def save_state_vectors_to_csv(output_csv_path):
     """
@@ -254,7 +257,7 @@ def save_state_vectors_to_csv(output_csv_path):
     - output_csv_path: str : Path to save the state vector list to a CSV file.
     """
     # Specify the header
-    header = ["x", "y", "z", "vx", "vy", "vz", "event_column"]
+    header = ['Time (s)', 'X (km)', 'Y (km)', 'Z (km)', 'Vx (km/s)', 'Vy (km/s)', 'Vz (km/s)', "Event"]
     
     # Open the file in write mode and write the data
     with open(output_csv_path, mode='w', newline='') as file:

@@ -14,7 +14,7 @@
 # The “interesting” trajectory as a feature, will you be able to identify it?
 # The size of the trajectory is not constant, same as the info available. In order to have a lean code that will be used for different application, consider this small feature and don’t extract column X thinking it will be the same info all the time 
 
-from open_excel import load_excel_as_two_arrays
+from functions_def import load_excel_as_two_arrays
 
 file_path = '/home/fabiomeloni/flight_safety/traiettoria.xlsx'
 
