@@ -161,3 +161,12 @@ maxQ_state = get_state_vector(max_index, string_array, numeric_array, "maxQ")
 save_state_vectors_to_csv(output_csv_path)
 
 print(f"Maximum value of Dynamic Pressure: {max_value} Pa, excel row index: {max_index+5}, timestamp: {maxQ_time} s, altitude: {maxQ_altitude} km, state vector: {maxQ_state} km-km/s")
+
+# Payload Capability assuming 200 kg of dry-mass for the kick-stage (S3)
+
+column_names = ["mass_total~Rocket", "PROP_MASS~Stage_3:Rocket"] # total mass of rocket (Mg) in column221 HM, propellant mass of stage 3 of rocket (Kg) in column 252 IR
+row_indexes = [find_column_index(string_array, column_name) for column_name in column_names] # first is the total, second is the s3 prop propellant mass
+final_masses = [numeric_array[-1, row_index] for row_index in row_indexes] # first is the final total mass, second is the final s3 propellant mass
+kick_stage_dry_mass = 200 # kg, from assumption, in reality it should be around 350 kg
+payload_mass = final_masses[0]*1e3 - (kick_stage_dry_mass + final_masses[1]) # final total mass (in Mg converted to kg) minus the dry mass and the final propellant mass
+print(f"total final mass: {final_masses[0]*1e3} kg, final propellant mass: {final_masses[1]} kg, assumed s3 inert mass: {kick_stage_dry_mass} kg, resulting payload mass: {payload_mass} kg")
