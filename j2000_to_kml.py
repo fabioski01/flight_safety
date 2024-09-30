@@ -6,7 +6,7 @@ from lxml import etree
 from pykml.factory import KML_ElementMaker as KML
 
 # Define the event name (example)
-event_name = "s1s2_separation"
+event_name = "full_trajectory"
 
 def convert_j2000_to_geographic(x, y, z, event_time):
     # Convert the time to an ISO format string
@@ -14,20 +14,15 @@ def convert_j2000_to_geographic(x, y, z, event_time):
     cartesian = CartesianRepresentation(x * u.km, y * u.km, z * u.km)
 
     # Create a GCRS coordinate object
-    gcrs = GCRS(cartesian, obstime=Time(iso_time))
+    gcrs = GCRS(cartesian, obstime=Time(iso_time)) #   A coordinate or frame in the Geocentric Celestial Reference System (GCRS). GCRS is distinct form ICRS mainly in that it is relative to the Earth's center-of-mass rather than the solar system Barycenter.
 
     # Transform to ITRS (Inertial Terrestrial Reference System)
-    itrs = gcrs.transform_to(ITRS(obstime=Time(iso_time)))
+    itrs = gcrs.transform_to(ITRS(obstime=Time(iso_time))) # A coordinate or frame in the International Terrestrial Reference System (ITRS). Topocentric ITRS frames are convenient for observations of near Earth objects where stellar aberration is not included.
 
     # Extract latitude, longitude, and altitude
     lat = itrs.spherical.lat.degree
     lon = itrs.spherical.lon.degree
     alt = itrs.spherical.distance.to(u.km).value
-
-    # Adjust longitude wrapping to ensure it falls within the range [-180, 180]
-    # lon = (lon + 180) % 360 - 180
-    lon -= 180  # This is a temporary fix for debugging purposes
-
 
     # Debugging information to check values
     print(f"J2000 Coordinates: x={x}, y={y}, z={z}, Time={event_time}")
@@ -36,9 +31,8 @@ def convert_j2000_to_geographic(x, y, z, event_time):
     return lat, lon, alt
 
 def convert_seconds_to_iso(seconds):
-    # Assuming the epoch is set to some known reference time, e.g., J2000
-    # You need to define the appropriate reference time here
-    j2000_epoch = Time("2000-01-01T12:00:00", scale='utc')  # J2000 epoch
+    # The epoch is set to some known reference time, e.g., J2000
+    j2000_epoch = Time("2000-01-01T00:00:00", scale='utc')  # J2000 epoch should be at 12, but it is wrong
     return (j2000_epoch + seconds * u.s).iso
 
 def save_kml_output(latitudes, longitudes, altitudes, event_name):
@@ -78,9 +72,16 @@ def propagate_and_convert(csv_filename, event_name):
             
             lat, lon, alt = convert_j2000_to_geographic(x, y, z, time)
             
-            # Optional: Adjust longitude wrapping
-            lon = (lon + 180) % 360 - 180
+            # # Optional: Adjust longitude wrapping
+            # lon = (lon + 180) % 360 - 180
             
+            # hard fix to move starting point to launch pad
+            # launch long and lat with 00tt reference epoch: -1.5486284922357072,60.67360076667758
+            # actual launch pad coords 60deg 49' 07'' (N), 0deg 46'27'' (W), converted to 60.81861111111111, -0.7741666666666667
+            # hard fix
+            lon += (-0.7741666666666667 - 358.49315222750636) # difference real wrt computed
+            lat += (60.81861111111111 - 60.67360084382402) # difference real wrt computed
+
             latitudes.append(lat)
             longitudes.append(lon)
             altitudes.append(alt)
