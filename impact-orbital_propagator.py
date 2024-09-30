@@ -4,7 +4,7 @@ from scipy.integrate import solve_ivp
 
 # Define constants
 mu_earth = 398600.4418  # Earth's gravitational parameter, km^3/s^2
-radius_earth = 6371  # Earth's radius in km
+radius_earth = 6371  # Earth's radius in km. This is a source of error since it is not constant along the earth's latitude as it is a spheroid. At Shetland latitude (60.8161 in decimals), the Earth's radius is 6361.869 km at sea level. This means that the impact points in reality could be "before" the simulated ones (e.g. impact points in the equatorial zone where the radius is 6378.137 km well over the average 6371 km considered), or "after" the simulated ones (e.g. for impact points in the polar zones since there the Earth's radius is 6356.752km). The latter one should be the case for S1, fairing, and S2 impact points as they are all inside the artic circle. A "get_radius" function should be written for accurate impact point estimation (https://rechneronline.de/earth-radius/). Of course, the Earth is not  perfect spheroid since its mass is not perfectly evenly distributed.
 
 # Function to read the state vector from the CSV file based on event name
 def load_state_vector_from_csv(event_name, csv_filename='state_vectors.csv'):
