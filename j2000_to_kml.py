@@ -6,7 +6,7 @@ from lxml import etree
 from pykml.factory import KML_ElementMaker as KML
 
 # Define the event name (example)
-event_name = "full_trajectory"
+event_name = "drag_s2s3_separation"
 
 def convert_j2000_to_geographic(x, y, z, event_time):
     # Convert the time to an ISO format string
