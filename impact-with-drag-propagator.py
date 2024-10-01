@@ -23,13 +23,26 @@ def load_state_vector_from_csv(event_name, csv_filename='state_vectors.csv'):
                 return flight_time, state_vector
     raise ValueError(f"Event name '{event_name}' not found in {csv_filename}")
 
+# def atmospheric_density(altitude):
+#     # Exponential atmospheric model based on altitude in km
+#     if altitude > 1000:
+#         return 0.0  # Beyond the atmosphere
+#     H = 8.5  # Scale height in km (typical for Earth atmosphere)
+#     rho_0 = 1.225  # Sea-level atmospheric density in kg/m^3
+#     return rho_0 * np.exp(-altitude / H)
+
+from pyatmos import coesa76
+
+# Function to get atmospheric density using pyatmosphere (COESA 1976 model)
 def atmospheric_density(altitude):
-    # Exponential atmospheric model based on altitude in km
-    if altitude > 1000:
-        return 0.0  # Beyond the atmosphere
-    H = 8.5  # Scale height in km (typical for Earth atmosphere)
-    rho_0 = 1.225  # Sea-level atmospheric density in kg/m^3
-    return rho_0 * np.exp(-altitude / H)
+    """
+    Returns the air density at a given altitude using pyatmosphere's COESA 1976 model.
+    Altitude is in kilometers, and the density is returned in kg/m^3.
+    """
+    coesa76_geom = coesa76(altitude) # in km
+    print(coesa76_geom.rho)
+    return coesa76_geom.rho  # Density in kg/m^3
+
 
 def drag_acceleration(state, surface_area, drag_coefficient, mass):
     x, y, z, vx, vy, vz = state
@@ -100,10 +113,10 @@ def propagate_trajectory_with_drag(event_name, surface_area, drag_coefficient, m
     print(f"Propagation complete. Results saved to {output_filename}")
 
 
-# # Example usage S1
-# event_name = 's1s2_separation'  # Define the event name you want to propagate from
-# propagate_trajectory_with_drag(event_name, surface_area=40, drag_coefficient=1.5, mass=((1.79408515641864E+01 - 1.23e1)*1e3)) # eg for S1 20m2 of surface area, 1.17 of Cd, and S1 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
+# Example usage S1
+event_name = 's1s2_separation'  # Define the event name you want to propagate from
+propagate_trajectory_with_drag(event_name, surface_area=28.1175, drag_coefficient=0.3, mass=((1.79408515641864E+01 - 1.23e1)*1e3)) # eg for S1 length is 8.15 and diameter is 3.45m, Cd is ~1 for Reynolds <2*10^5 Then it falls to 0.2-0.3. For flow speed=0.8km/s the Re=7*10^6, which would be Re=0.3 S1 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
 
-# Example usage S2
-event_name = 's2s3_separation'  # Define the event name you want to propagate from
-propagate_trajectory_with_drag(event_name, surface_area=10, drag_coefficient=1.5, mass=((3.01735153404769E+00 -  1.08735152707548E+00)*1e3)) # eg for S1 20m2 of surface area, 1.17 of Cd, and S1 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
+# # Example usage S2
+# event_name = 's2s3_separation'  # Define the event name you want to propagate from
+# propagate_trajectory_with_drag(event_name, surface_area=7.18, drag_coefficient=0.2, mass=((3.01735153404769E+00 -  1.08735152707548E+00)*1e3)) # eg for S1 length is 3.338m and diameter is 2.15m, Cd is ~1 for Reynolds <2*10^5 Then it falls to 0.2-0.3. For flow speed=2.8km/s the Re is not defined, but it is likely 0.1-0.2, which would be Re=0.3 S1 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
