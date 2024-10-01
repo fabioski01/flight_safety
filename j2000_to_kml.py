@@ -4,6 +4,7 @@ from astropy.coordinates import GCRS, ITRS, CartesianRepresentation
 from astropy.time import Time
 from lxml import etree
 from pykml.factory import KML_ElementMaker as KML
+import math
 
 # Define the event name (example)
 event_name = "drag_s2s3_separation"
@@ -35,7 +36,7 @@ def convert_seconds_to_iso(seconds):
     j2000_epoch = Time("2000-01-01T00:00:00", scale='utc')  # J2000 epoch should be at 12, but it is wrong
     return (j2000_epoch + seconds * u.s).iso
 
-def save_kml_output(latitudes, longitudes, altitudes, event_name):
+def save_kml_output(latitudes, longitudes, altitudes, event_name, impact_radius):
     # Create KML document structure
     kml_doc = KML.kml(
         KML.Document(
@@ -47,6 +48,45 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name):
                         " ".join(f"{lon},{lat},{alt}" for lon, lat, alt in zip(longitudes, latitudes, altitudes))
                     )
                 )
+            ),
+            KML.Placemark(
+                KML.name("Impact Point"),
+                KML.Point(
+                    KML.coordinates(f"{longitudes[-1]},{latitudes[-1]},{altitudes[-1]}")
+                ),
+                KML.Style(
+                    KML.IconStyle(
+                        KML.Icon(
+                            KML.href("http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png")
+                        )
+                    )
+                )
+            ),
+            # Add a filled circle around the impact point
+            KML.Placemark(
+                KML.name("Impact Area"),
+                KML.Style(
+                    KML.LineStyle(
+                        KML.color("ff0000ff"),  # Outline color (red)
+                        KML.width(2)
+                    ),
+                    KML.PolygonStyle(
+                        KML.color("7f0000ff"),  # Fill color (semi-transparent red)
+                        KML.outline(False)       # Disable outline for polygon
+                    )
+                ),
+                KML.Polygon(
+                    KML.outerBoundaryIs(
+                        KML.LinearRing(
+                            KML.coordinates(
+                                " ".join(
+                                    f"{longitudes[-1] + (impact_radius / 111.32) * math.cos(math.radians(angle)) / math.cos(math.radians(latitudes[-1]))},{latitudes[-1] + (impact_radius / 111.32) * math.sin(math.radians(angle))},0"
+                                    for angle in range(0, 360, 10)  # 36 points to make a circle
+                                )
+                            )
+                        )
+                    )
+                )
             )
         )
     )
@@ -55,7 +95,47 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name):
     with open(f"kml_trajectory_{event_name}.kml", "wb") as kml_file:
         kml_file.write(etree.tostring(kml_doc, pretty_print=True))
 
-def propagate_and_convert(csv_filename, event_name):
+# def save_kml_output(latitudes, longitudes, altitudes, event_name):
+#     # Create KML document structure
+#     kml_doc = KML.kml(
+#         KML.Document(
+#             KML.name(f"Trajectory {event_name}"),
+#             KML.Placemark(
+#                 KML.name(f"Trajectory {event_name}"),
+#                 KML.LineString(
+#                     KML.coordinates(
+#                         " ".join(f"{lon},{lat},{alt}" for lon, lat, alt in zip(longitudes, latitudes, altitudes))
+#                     )
+#                 )
+#             ),
+#             # Add the impact point as a placemark at the final trajectory point
+#             KML.Placemark(
+#                 KML.name("Impact Point"),
+#                 KML.Point(
+#                     KML.coordinates(f"{longitudes[-1]},{latitudes[-1]},{altitudes[-1]}")
+#                 ),
+#                 KML.styleUrl("#impactIcon")  # Reference to icon style
+#             )
+#         )
+#     )
+
+#     # Define the impact icon style
+#     kml_doc.Document.append(KML.Style(
+#         KML.id("impactIcon"),
+#         KML.IconStyle(
+#             KML.color("ff0000ff"),  # Blue icon color
+#             KML.scale(1.0),
+#             KML.Icon(
+#                 KML.href("http://maps.google.com/mapfiles/kml/shapes/target.png")  # Impact point icon
+#             )
+#         )
+#     ))
+
+#     # Save to KML file
+#     with open(f"kml_trajectory_{event_name}.kml", "wb") as kml_file:
+#         kml_file.write(etree.tostring(kml_doc, pretty_print=True))
+
+def propagate_and_convert(csv_filename, event_name, impact_radius):
     latitudes = []
     longitudes = []
     altitudes = []
@@ -86,8 +166,9 @@ def propagate_and_convert(csv_filename, event_name):
             longitudes.append(lon)
             altitudes.append(alt)
 
-    save_kml_output(latitudes, longitudes, altitudes, event_name)
+    save_kml_output(latitudes, longitudes, altitudes, event_name, impact_radius)
 
 # Example usage
 csv_filename = f"propagated_state_vector_{event_name}.csv"  # Make sure this file exists
-propagate_and_convert(csv_filename, event_name)
+impact_radius = 20 # km
+propagate_and_convert(csv_filename, event_name, impact_radius)
