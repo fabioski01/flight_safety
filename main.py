@@ -1,18 +1,29 @@
-# Identify the type of mission (where do we launch, orbit, inclination). Then the key events:
-#   ignition S1
-#   ignition S2
-#   ignition S3
-#   max q
-#   meco (main engine cut-off)
-#   seco (second engine cut-off)
-#   stage separation 1/2
-#   fairing separation
-#   payload capability assuming 200kg of dry mass for kick stage
-# Have as an output the time, position and altitude of the key event and their relative impact point
-# Having in a separate folder the state vector at each event (stage and fairing separation)
-# Optional: could you generate kmz or kml files for visualization in google earth of the trajectories and the line of instantaneous impact point
-# The “interesting” trajectory as a feature, will you be able to identify it?
-# The size of the trajectory is not constant, same as the info available. In order to have a lean code that will be used for different application, consider this small feature and don’t extract column X thinking it will be the same info all the time 
+"""
+TASK:
+
+Identify the type of mission (where do we launch, orbit, inclination). Then the key events:
+ - ignition S1
+ - ignition S2
+ - ignition S3
+ - max q
+ - meco (main engine cut-off)
+ - seco (second engine cut-off)
+ - stage separation 1/2
+ - fairing separation
+ - payload capability assuming 200kg of dry mass for kick stage
+
+Have as an output the time, position and altitude of the key event and their relative impact point.
+
+Having in a separate folder the state vector at each event (stage and fairing separation).
+
+Optional: could you generate kmz or kml files for visualization in google earth of the trajectories 
+and the line of instantaneous impact point.
+
+The “interesting” trajectory as a feature, will you be able to identify it?
+The size of the trajectory is not constant, same as the info available. In order to have a lean code 
+that will be used for different application, consider this small feature and do not extract column X
+thinking it will be the same info all the time.
+"""
 
 from functions_def import load_excel_as_two_arrays
 
