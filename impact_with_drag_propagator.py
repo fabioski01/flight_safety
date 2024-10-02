@@ -1,3 +1,30 @@
+"""
+This Python script models the trajectory of a spacecraft considering atmospheric drag effects. 
+It utilizes numerical methods to propagate the state vector derived from initial conditions read from 
+a CSV file, applying the two-body problem equations with drag included. The script employs the 
+COESA 1976 atmospheric model for air density calculations and provides functions to calculate drag 
+coefficients based on Reynolds numbers for different object shapes.
+
+Key features include:
+- Loading state vectors for different events from a CSV file.
+- Extracting the atmospheric density from COESA 1976 atmospheric model.
+- Extracting drag coefficient for a circular cylinder from empirical tables given the Reynolds.
+- Computing atmospheric drag acceleration on the spacecraft.
+- Propagating the spacecraft's trajectory over a defined time span.
+- Saving the propagated trajectory results back to a CSV file.
+
+Future features:
+- Extracting Earth radius depending on latitude
+- More precise impact point computation considering gravitational and tidal perturbations
+and additional drags.
+
+Constants for Earth's gravitational parameter and radius are defined at the beginning, with 
+necessary adjustments noted for accuracy based on geographic latitude variations. 
+The script is intended for use in launch vehicle simulations, particularly to compute and
+propagate trajectories and impact points for spent rocket stages and other components.
+"""
+
+
 import numpy as np
 import csv
 from scipy.integrate import solve_ivp
@@ -11,6 +38,21 @@ radius_earth = 6371  # Earth's radius in km. This is a source of error since it 
 # Function to read the state vector from the CSV file based on event name
 # Function to read the state vector from the CSV file based on event name
 def load_state_vector_from_csv(event_name, csv_filename='state_vectors.csv'):
+    """
+    Loads the state vector (position and velocity) for a specified event from a CSV file.
+
+    Args:
+        event_name (str): The name of the event for which the state vector is being loaded.
+        csv_filename (str, optional): The path to the CSV file containing state vectors. Defaults to 'state_vectors.csv'.
+
+    Returns:
+        tuple: A tuple containing:
+            - flight_time (float): The time of the event in seconds.
+            - state_vector (numpy array): A 6-element array with the position (in km) and velocity (in km/s) of the object.
+
+    Raises:
+        ValueError: If the event name is not found in the CSV file.
+    """
     # Map special event names to standard event names
     event_name_map = {
         'drag_s1s2_separation': 's1s2_separation',
@@ -39,12 +81,14 @@ def load_state_vector_from_csv(event_name, csv_filename='state_vectors.csv'):
     # Raise an error if the event name is not found
     raise ValueError(f"Event name '{event_name}' not found in {csv_filename}")
 
-
-# Function to get atmospheric density using pyatmosphere (COESA 1976 model)
 def atmospheric_density(altitude):
     """
     Returns the air density at a given altitude using pyatmosphere's COESA 1976 model.
-    Altitude is in kilometers, and the density is returned in kg/m^3.
+    Args:
+        altitude (float): The altitude in kilometers for which the air density is being computed.
+
+    Returns:
+        float: The air density at the given altitude in kg/m^3.
     """
     coesa76_geom = coesa76(altitude) # in km
     # print(coesa76_geom.rho)
@@ -57,6 +101,11 @@ def get_drag_coefficient(Reynolds):
     """
     Returns the drag coefficient (Cd) based on the Reynolds number (Re) for circular cylinders (NACA-TN-3038)
     Data is taken from "Summary of Drag Coefficients of Various Shaped Cylinders by General Electric - Atomic Products Division - Aircraft Nuclear Propulsion Department
+    Args:
+        Reynolds (float): The Reynolds number for which the drag coefficient is extracted.
+
+    Returns:
+        float: The drag coefficient Cd at the given Reynolds.
     """
     # Create an interpolation function for Cd as a function of Re
     cd_interp = interp1d(reynolds_numbers, drag_coefficients, kind='cubic', bounds_error=False, fill_value='extrapolate')
@@ -66,12 +115,20 @@ def get_drag_coefficient(Reynolds):
         # return 0.0
     else:
         return cd_interp(Reynolds)
-    
-def get_drag_coefficient(Reynolds):
-    Cd = 0.4
-    return Cd
 
 def drag_acceleration(state, surface_area, mass):
+    """
+    Computes the acceleration due to drag on an object in the atmosphere, given its state vector, surface area, and mass.
+    
+    Args:
+        state (array-like): A 6-element array representing the state vector [x, y, z, vx, vy, vz], 
+                            where x, y, z are the positions in km, and vx, vy, vz are the velocities in km/s.
+        surface_area (float): The surface area of the object in square meters.
+        mass (float): The mass of the object in kilograms.
+    
+    Returns:
+        list: A 3-element list representing the drag acceleration in km/s² in the x, y, and z directions.
+    """
     x, y, z, vx, vy, vz = state
     r = np.sqrt(x**2 + y**2 + z**2)
     altitude = r - radius_earth # this makes sense
@@ -105,6 +162,20 @@ def drag_acceleration(state, surface_area, mass):
     return a_drag
 
 def two_body_equations_with_drag(t, state, mu, surface_area, mass):
+    """
+    Computes the state derivatives for a two-body problem with atmospheric drag.
+
+    Args:
+        t (float): The current time (not used in this implementation, but necessary for ode solvers).
+        state (list): The current state vector [x, y, z, vx, vy, vz], where (x, y, z) are the position coordinates in kilometers,
+                      and (vx, vy, vz) are the velocity components in kilometers per second.
+        mu (float): The gravitational parameter (GM) of the central body (Earth) in km^3/s^2.
+        surface_area (float): The surface area of the spacecraft in square meters.
+        mass (float): The mass of the spacecraft in kilograms.
+
+    Returns:
+        list: A list containing the derivatives [vx, vy, vz, ax, ay, az], where (ax, ay, az) are the accelerations in kilometers per second squared.
+    """
     x, y, z, vx, vy, vz = state
     r = np.sqrt(x**2 + y**2 + z**2) # in km
     
@@ -123,9 +194,22 @@ def two_body_equations_with_drag(t, state, mu, surface_area, mass):
 
     return [vx, vy, vz, ax, ay, az] # in km/s and km/s2
 
-
-# Event function to detect when the spacecraft impacts the Earth's surface
 def impact_condition(t, state, mu, surface_area, mass):
+    """
+    Event function to detect when the spacecraft impacts the Earth's surface.
+
+    Args:
+        t (float): Current time in seconds during the simulation.
+        state (array-like): A 6-element array representing the state vector [x, y, z, vx, vy, vz], 
+                            where x, y, z are the positions in km.
+        mu (float): Standard gravitational parameter for the Earth (in km³/s²).
+        surface_area (float): The surface area of the spacecraft in square meters.
+        mass (float): The mass of the spacecraft in kilograms.
+
+    Returns:
+        float: The difference between the current radial distance of the spacecraft from Earth's center and the Earth's radius.
+               The event triggers when this value is zero (i.e., when the spacecraft reaches the surface of the Earth).
+    """
     x, y, z = state[:3]
     r = np.sqrt(x**2 + y**2 + z**2) # in km
     return r - radius_earth  # Trigger event when r = Earth's radius
@@ -133,8 +217,21 @@ def impact_condition(t, state, mu, surface_area, mass):
 impact_condition.terminal = True  # Stop propagation at impact
 impact_condition.direction = -1  # Detect only when approaching the Earth's surface
 
-def propagate_trajectory_with_drag(event_name, surface_area, mass, 
-                                   csv_input='state_vectors.csv', csv_output='propagated_state_vector_drag_{}.csv'):
+def propagate_trajectory_with_drag(event_name, surface_area, mass, csv_input='state_vectors.csv', csv_output='propagated_state_vector_drag_{}.csv'):
+    """
+    Propagates the trajectory of the spacecraft considering atmospheric drag and saves the result to a CSV file.
+
+    Args:
+        event_name (str): The name of the event for which the state vector is being propagated (e.g., 's1s2_separation').
+        surface_area (float): The surface area of the spacecraft in square meters.
+        mass (float): The mass of the spacecraft in kilograms.
+        csv_input (str): The name of the input CSV file containing the initial state vector. Default is 'state_vectors.csv'.
+        csv_output (str): The format string for the output CSV file where results will be saved.
+                          The event name is used to format the file name. Default is 'propagated_state_vector_drag_{}.csv'.
+
+    Returns:
+        None: The function saves the propagated trajectory to a CSV file.
+    """
     # Load the initial state vector from CSV
     flight_time, state0 = load_state_vector_from_csv(event_name, csv_input)
 

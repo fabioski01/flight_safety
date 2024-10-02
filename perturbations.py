@@ -1,16 +1,36 @@
-################################################################################################################################
-# File to load perturbations on descending objects.
-# As of now the following have been implemented:
-# - Lateral wind perturbation (note that the reynolds, Cd, and drag force on the object is computed considering an object starting with zero velocity at a given altitude. Since the spent rocket stages will start from seperation with large velocities, the real Reynolds will be much higher, the Cd probably lower, but the overall drag much higher, but that should give a drag force which must be summed with the atmospheric drag. Since the atmospheric drag is computed separately, this wind force is only used to plot the impact circle having as radius the largest displacement caused by a wind with constant direction onto the surface area of the object).
-# Other perturbations that could be implemented are:
-# - Gravitational perturbations (Earth J2 and third-body perturbations from Sun and Moon)
-# - Coriolis force
-# - Tidal forces
-# - Electric drag from plasma re-entry
-# Other possible enhancements:
-# - Changing Earth's radius function based on latitude
-# - Probabilistic analysis
-################################################################################################################################
+"""
+This Python script is designed to compute the impact radius of descending objects due to wind perturbations. 
+The impact radius is influenced by several factors, including the object's surface area, mass, and altitude, 
+as well as the local wind speed profile. 
+
+As of now the following have been implemented:
+- Lateral wind perturbation (note that the reynolds, Cd, and drag force on the object is computed considering 
+an object starting with zero velocity at a given altitude. Since the spent rocket stages will start from 
+separation with large velocities, the real Reynolds will be much higher, the Cd probably lower, but the 
+overall drag much higher, but that should give a drag force which must be summed with the atmospheric drag. 
+Since the atmospheric drag is computed separately, this wind force is only used to plot the impact circle 
+having as radius the largest displacement caused by a wind with constant direction onto the surface area of 
+the object).
+
+Functions defined within the script include:
+- `wind_speed_profile`: Returns the wind speed at a given altitude using cubic interpolation of empirical data.
+- `get_impact_radius`: Computes the impact radius for specific events by integrating the equations of motion 
+influenced by wind drag and gravity.
+
+Other perturbations that could be implemented in the future are:
+- Gravitational perturbations (Earth J2 and third-body perturbations from Sun and Moon);
+- Coriolis force;
+- Tidal forces;
+- Electric drag from plasma re-entry.
+
+Other possible future enhancements:
+- Changing Earth's radius function based on latitude;
+- Probabilistic analysis of descent trajectories.
+
+This script is intended for launch vehicle simulations, particularly for assessing the impact risks associated
+with spent rocket stages and other descending objects.
+"""
+
 
 from impact_with_drag_propagator import get_drag_coefficient, atmospheric_density, load_state_vector_from_csv
 import numpy as np

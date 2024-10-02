@@ -1,3 +1,29 @@
+"""
+This Python script is designed to convert spacecraft trajectory data from Cartesian coordinates in the 
+J2000 reference frame to geographic coordinates. It processes state vectors stored in a CSV file, 
+transforming them into a KML format for visualization in mapping applications.
+
+Key features include:
+- Conversion of Cartesian coordinates to geographic coordinates (latitude, longitude, altitude) using 
+astropy's coordinate transformations.
+- Generation of KML files that include trajectory paths, impact points, and separation points for 
+various events.
+- Handling of atmospheric corrections and adjustments for geographical coordinates based on launch pad
+locations.
+
+The script uses several libraries, including astropy for astronomical calculations, lxml for 
+XML handling, and pykml for KML file generation. 
+Functions defined within the script include:
+- `convert_j2000_to_geographic`: Transforms J2000 Cartesian coordinates into geographic coordinates.
+- `convert_seconds_to_iso`: Converts time from seconds since the J2000 epoch to ISO 8601 format.
+- `save_kml_output`: Generates and saves KML output for trajectory visualization.
+- `propagate_and_convert`: Reads state vectors from a CSV file, processes them, and invokes KML output generation.
+
+The script is intended for use in launch vehicle simulations, particularly to visualize trajectories and
+impact points and areas of spent rocket stages and other components.
+"""
+
+
 import csv
 from astropy import units as u
 from astropy.coordinates import GCRS, ITRS, CartesianRepresentation
@@ -8,9 +34,26 @@ import math
 from perturbations import get_impact_radius
 
 # Define the event name (example)
-event_name = "drag_s2fairing_separation"
+# event_name = 'drag_s1s2_separation'
+# event_name = 'drag_s2s3_separation'
+# event_name = "drag_s2fairing_separation"
 
 def convert_j2000_to_geographic(x, y, z, event_time):
+    """
+    Converts Cartesian coordinates in the J2000 reference frame to geographic coordinates (latitude, longitude, altitude).
+
+    Args:
+        x (float): The x-coordinate in kilometers.
+        y (float): The y-coordinate in kilometers.
+        z (float): The z-coordinate in kilometers.
+        event_time (float): The event time in seconds since the J2000 epoch.
+
+    Returns:
+        tuple: A tuple containing:
+            - lat (float): Latitude in degrees.
+            - lon (float): Longitude in degrees.
+            - alt (float): Altitude in kilometers.
+    """
     # Convert the time to an ISO format string
     iso_time = convert_seconds_to_iso(event_time)
     cartesian = CartesianRepresentation(x * u.km, y * u.km, z * u.km)
@@ -33,16 +76,54 @@ def convert_j2000_to_geographic(x, y, z, event_time):
     return lat, lon, alt
 
 def convert_seconds_to_iso(seconds):
+    """
+    Converts a time in seconds since the J2000 epoch to an ISO 8601 formatted string.
+
+    Args:
+        seconds (float): The time in seconds since the J2000 epoch.
+
+    Returns:
+        str: An ISO 8601 formatted time string corresponding to the input seconds.
+    """
     # The epoch is set to some known reference time, e.g., J2000
     j2000_epoch = Time("2000-01-01T00:00:00", scale='utc')  # J2000 epoch should be at 12, but it is wrong
     return (j2000_epoch + seconds * u.s).iso
 
 def save_kml_output(latitudes, longitudes, altitudes, event_name):
+    """
+    Saves the trajectory and impact information to a KML file for visualization in mapping applications.
+
+    Args:
+        latitudes (list of float): List of latitudes in degrees.
+        longitudes (list of float): List of longitudes in degrees.
+        altitudes (list of float): List of altitudes in kilometers.
+        event_name (str): The name of the event associated with the trajectory, used for naming and distinguishing outputs.
+
+    Returns:
+        None: The function writes the KML output to a file.
+    """
     impact_radius = get_impact_radius(event_name)
+
     # Create KML document structure
     kml_doc = KML.kml(
         KML.Document(
             KML.name(f"Trajectory {event_name}"),
+            
+            # Add Separation Point Placemark
+            KML.Placemark(
+                KML.name(f"Separation Point {event_name}"),
+                KML.Point(
+                    KML.coordinates(f"{longitudes[0]},{latitudes[0]},{altitudes[0]}")
+                ),
+                KML.Style(
+                    KML.IconStyle(
+                        KML.Icon(
+                            KML.href("http://maps.google.com/mapfiles/kml/shapes/placemark_square.png")
+                        )
+                    )
+                )
+            ),
+            
             KML.Placemark(
                 KML.name(f"Trajectory {event_name}"),
                 KML.LineString(
@@ -52,7 +133,7 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name):
                 )
             ),
             KML.Placemark(
-                KML.name("Impact Point"),
+                KML.name(f"Impact Point {event_name}"),
                 KML.Point(
                     KML.coordinates(f"{longitudes[-1]},{latitudes[-1]},{altitudes[-1]}")
                 ),
@@ -97,7 +178,22 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name):
     with open(f"kml_trajectory_{event_name}.kml", "wb") as kml_file:
         kml_file.write(etree.tostring(kml_doc, pretty_print=True))
 
+    # Save to KML file
+    with open(f"kml_trajectory_{event_name}.kml", "wb") as kml_file:
+        kml_file.write(etree.tostring(kml_doc, pretty_print=True))
+
 def propagate_and_convert(csv_filename, event_name):
+    """
+    Propagates the trajectory from a CSV file containing state vectors, converts the coordinates
+    from J2000 to geographic coordinates, and saves the results in a KML format.
+
+    Args:
+        csv_filename (str): The name of the CSV file containing the state vectors (time, x, y, z).
+        event_name (str): The name of the event associated with the trajectory, used for naming outputs.
+
+    Returns:
+        None: The function writes the KML output to a file after processing the trajectory data.
+    """
     latitudes = []
     longitudes = []
     altitudes = []
