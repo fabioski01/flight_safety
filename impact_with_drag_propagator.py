@@ -2,7 +2,6 @@ import numpy as np
 import csv
 from scipy.integrate import solve_ivp
 from pyatmos import coesa76
-from fluids import drag
 from scipy.interpolate import interp1d
 
 # Define constants
@@ -12,18 +11,34 @@ radius_earth = 6371  # Earth's radius in km. This is a source of error since it 
 # Function to read the state vector from the CSV file based on event name
 def load_state_vector_from_csv(event_name, csv_filename='state_vectors.csv'):
     with open(csv_filename, 'r') as file:
-        reader = csv.reader(file)
-        header = next(reader)  # Read the header
-        
-        # Iterate through the rows to find the matching event
-        for row in reader:
-            if row[-1] == event_name:  # Match the event name
-                # Extract time, position, and velocity
-                flight_time = float(row[0])  # Time in seconds
-                position = np.array([float(row[1]), float(row[2]), float(row[3])])  # Position in km
-                velocity = np.array([float(row[4]), float(row[5]), float(row[6])])  # Velocity in km/s
-                state_vector = np.hstack((position, velocity))
-                return flight_time, state_vector
+        if event_name == 'drag_s1s2_separation':
+            event_name = 's1s2_separation'
+
+            reader = csv.reader(file)
+            header = next(reader)  # Read the header
+            
+            # Iterate through the rows to find the matching event
+            for row in reader:
+                if row[-1] == event_name:  # Match the event name
+                    # Extract time, position, and velocity
+                    flight_time = float(row[0])  # Time in seconds
+                    position = np.array([float(row[1]), float(row[2]), float(row[3])])  # Position in km
+                    velocity = np.array([float(row[4]), float(row[5]), float(row[6])])  # Velocity in km/s
+                    state_vector = np.hstack((position, velocity))
+                    return flight_time, state_vector
+        else:
+            reader = csv.reader(file)
+            header = next(reader)  # Read the header
+            
+            # Iterate through the rows to find the matching event
+            for row in reader:
+                if row[-1] == event_name:  # Match the event name
+                    # Extract time, position, and velocity
+                    flight_time = float(row[0])  # Time in seconds
+                    position = np.array([float(row[1]), float(row[2]), float(row[3])])  # Position in km
+                    velocity = np.array([float(row[4]), float(row[5]), float(row[6])])  # Velocity in km/s
+                    state_vector = np.hstack((position, velocity))
+                    return flight_time, state_vector
     raise ValueError(f"Event name '{event_name}' not found in {csv_filename}")
 
 # Function to get atmospheric density using pyatmosphere (COESA 1976 model)
@@ -32,8 +47,6 @@ def atmospheric_density(altitude):
     Returns the air density at a given altitude using pyatmosphere's COESA 1976 model.
     Altitude is in kilometers, and the density is returned in kg/m^3.
     """
-    # debug
-    print(altitude)
     coesa76_geom = coesa76(altitude) # in km
     # print(coesa76_geom.rho)
     return coesa76_geom.rho  # Density in kg/m^3
@@ -179,7 +192,7 @@ def propagate_trajectory_with_drag(event_name, surface_area, mass,
 # propagate_trajectory_with_drag(event_name, surface_area=28.1175, mass=((1.79408515641864E+01 - 1.23e1)*1e3)) 
 # # eg for S1 length is 8.15 and diameter is 3.45m, Cd is ~1 for Reynolds <2*10^5 Then it falls to 0.2-0.3. For flow speed=0.8km/s the Re=7*10^6, which would be Re=0.3 S1 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
 
-# Example usage S2
-event_name = 's2s3_separation'  # Define the event name you want to propagate from
-propagate_trajectory_with_drag(event_name, surface_area=7.18, mass=((3.01735153404769E+00 -  1.08735152707548E+00)*1e3)) 
-# eg for S1 length is 3.338m and diameter is 2.15m, mass isS1 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
+# # Example usage S2
+# event_name = 's2s3_separation'  # Define the event name you want to propagate from
+# propagate_trajectory_with_drag(event_name, surface_area=7.18, mass=((3.01735153404769E+00 -  1.08735152707548E+00)*1e3)) 
+# # eg for S1 length is 3.338m and diameter is 2.15m, mass isS1 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
