@@ -8,7 +8,7 @@ import math
 from perturbations import get_impact_radius
 
 # Define the event name (example)
-event_name = "drag_s1s2_separation"
+event_name = "drag_s2fairing_separation"
 
 def convert_j2000_to_geographic(x, y, z, event_time):
     # Convert the time to an ISO format string
