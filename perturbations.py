@@ -1,3 +1,17 @@
+################################################################################################################################
+# File to load perturbations on descending objects.
+# As of now the following have been implemented:
+# - Lateral wind perturbation (note that the reynolds, Cd, and drag force on the object is computed considering an object starting with zero velocity at a given altitude. Since the spent rocket stages will start from seperation with large velocities, the real Reynolds will be much higher, the Cd probably lower, but the overall drag much higher, but that should give a drag force which must be summed with the atmospheric drag. Since the atmospheric drag is computed separately, this wind force is only used to plot the impact circle having as radius the largest displacement caused by a wind with constant direction onto the surface area of the object).
+# Other perturbations that could be implemented are:
+# - Gravitational perturbations (Earth J2 and third-body perturbations from Sun and Moon)
+# - Coriolis force
+# - Tidal forces
+# - Electric drag from plasma re-entry
+# Other possible enhancements:
+# - Changing Earth's radius function based on latitude
+# - Probabilistic analysis
+################################################################################################################################
+
 from impact_with_drag_propagator import get_drag_coefficient, atmospheric_density, load_state_vector_from_csv
 import numpy as np
 from scipy.interpolate import interp1d
@@ -47,6 +61,8 @@ def get_impact_radius(event_name):
     if event_name == 's2fairing_separation' or 'drag_s2fairing_separation':
         surface_area = 17.2 # m2 8 of L3 times diameter of 2.15m
         mass = ((1.04228914258135E+01 - 1.01628914258135E+01)*1e3) # kg    
+    else:
+        raise ValueError(f"Event name '{event_name}' not recognized. Try with s1s2_separation or s2s3_separation or s2fairing_separation. Or try putting drag_ in front of them")
 
     x, y, z, vx, vy, vz = state # km and km/s
     r = np.sqrt(x**2 + y**2 + z**2) # km
@@ -102,7 +118,6 @@ def get_impact_radius(event_name):
         time += dt
 
     return float(displacement[0])  # Return the total displacement caused by wind
-
 
 # # S1-S2 separation
 # event_name = 's1s2_separation'
