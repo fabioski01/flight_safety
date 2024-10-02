@@ -45,8 +45,8 @@ def get_impact_radius(event_name):
         surface_area = 7.185 # m2
         mass = ((3.01735153404769E+00 -  1.08735152707548E+00)*1e3) # kg
     if event_name == 's2fairing_separation' or 'drag_s2fairing_separation':
-        surface_area = 7.185 # m2
-        mass = ((3.01735153404769E+00 -  1.08735152707548E+00)*1e3) # kg    
+        surface_area = 17.2 # m2 8 of L3 times diameter of 2.15m
+        mass = ((1.04228914258135E+01 - 1.01628914258135E+01)*1e3) # kg    
 
     x, y, z, vx, vy, vz = state # km and km/s
     r = np.sqrt(x**2 + y**2 + z**2) # km
@@ -81,7 +81,7 @@ def get_impact_radius(event_name):
             drag_force = 0.5 * atmospheric_density(altitude) * (velocity + wind_speed)**2 * surface_area * get_drag_coefficient(velocity)
             drag_acceleration = drag_force / mass
             total_acceleration = -g - drag_acceleration  # Negative due to direction
-            print(altitude)
+            # print(altitude) # for debugging
             return [velocity, total_acceleration]
 
         # Runge-Kutta 4th order integration
@@ -104,14 +104,14 @@ def get_impact_radius(event_name):
     return float(displacement[0])  # Return the total displacement caused by wind
 
 
-# S1-S2 separation
-event_name = 's1s2_separation'
-surface_area = 28.1175 # m2
-mass = ((1.79408515641864E+01 - 1.23e1) * 1e3) # kg
+# # S1-S2 separation
+# event_name = 's1s2_separation'
+# surface_area = 28.1175 # m2
+# mass = ((1.79408515641864E+01 - 1.23e1) * 1e3) # kg
 # S2-S3 separation
-event_name = 's2s3_separation'
-surface_area = 7.185 # m2
-mass = ((3.01735153404769E+00 -  1.08735152707548E+00)*1e3) # kg
+# event_name = 's2s3_separation'
+# surface_area = 7.185 # m2
+# mass = ((3.01735153404769E+00 -  1.08735152707548E+00)*1e3) # kg
 
-impact_radius = get_impact_radius(event_name)
-print(f'Computed impact radius is: {float(impact_radius)} km')
+# impact_radius = get_impact_radius(event_name)
+# print(f'Computed impact radius is: {float(impact_radius)} km')
