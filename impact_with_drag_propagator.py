@@ -9,37 +9,36 @@ mu_earth = 398600.4418  # Earth's gravitational parameter, km^3/s^2
 radius_earth = 6371  # Earth's radius in km. This is a source of error since it is not constant along the earth's latitude as it is a spheroid. At Shetland latitude (60.8161 in decimals), the Earth's radius is 6361.869 km at sea level. This means that the impact points in reality could be "before" the simulated ones (e.g. impact points in the equatorial zone where the radius is 6378.137 km well over the average 6371 km considered), or "after" the simulated ones (e.g. for impact points in the polar zones since there the Earth's radius is 6356.752km). The latter one should be the case for S1, fairing, and S2 impact points as they are all inside the artic circle. A "get_radius" function should be written for accurate impact point estimation (https://rechneronline.de/earth-radius/). Of course, the Earth is not  perfect spheroid since its mass is not perfectly evenly distributed.
 
 # Function to read the state vector from the CSV file based on event name
+# Function to read the state vector from the CSV file based on event name
 def load_state_vector_from_csv(event_name, csv_filename='state_vectors.csv'):
+    # Map special event names to standard event names
+    event_name_map = {
+        'drag_s1s2_separation': 's1s2_separation',
+        'drag_s2s3_separation': 's2s3_separation',
+        'drag_s2fairing_separation': 's2fairing_separation'
+    }
+    
+    # If the event name is in the map, replace it with the standard name
+    event_name = event_name_map.get(event_name, event_name)
+    
+    # Open and read the CSV file
     with open(csv_filename, 'r') as file:
-        if event_name == 'drag_s1s2_separation':
-            event_name = 's1s2_separation'
-
-            reader = csv.reader(file)
-            header = next(reader)  # Read the header
-            
-            # Iterate through the rows to find the matching event
-            for row in reader:
-                if row[-1] == event_name:  # Match the event name
-                    # Extract time, position, and velocity
-                    flight_time = float(row[0])  # Time in seconds
-                    position = np.array([float(row[1]), float(row[2]), float(row[3])])  # Position in km
-                    velocity = np.array([float(row[4]), float(row[5]), float(row[6])])  # Velocity in km/s
-                    state_vector = np.hstack((position, velocity))
-                    return flight_time, state_vector
-        else:
-            reader = csv.reader(file)
-            header = next(reader)  # Read the header
-            
-            # Iterate through the rows to find the matching event
-            for row in reader:
-                if row[-1] == event_name:  # Match the event name
-                    # Extract time, position, and velocity
-                    flight_time = float(row[0])  # Time in seconds
-                    position = np.array([float(row[1]), float(row[2]), float(row[3])])  # Position in km
-                    velocity = np.array([float(row[4]), float(row[5]), float(row[6])])  # Velocity in km/s
-                    state_vector = np.hstack((position, velocity))
-                    return flight_time, state_vector
+        reader = csv.reader(file)
+        header = next(reader)  # Skip the header
+        
+        # Iterate through the rows to find the matching event
+        for row in reader:
+            if row[-1] == event_name:  # Match the event name
+                # Extract time, position, and velocity
+                flight_time = float(row[0])  # Time in seconds
+                position = np.array([float(row[1]), float(row[2]), float(row[3])])  # Position in km
+                velocity = np.array([float(row[4]), float(row[5]), float(row[6])])  # Velocity in km/s
+                state_vector = np.hstack((position, velocity))
+                return flight_time, state_vector
+    
+    # Raise an error if the event name is not found
     raise ValueError(f"Event name '{event_name}' not found in {csv_filename}")
+
 
 # Function to get atmospheric density using pyatmosphere (COESA 1976 model)
 def atmospheric_density(altitude):
@@ -105,35 +104,6 @@ def drag_acceleration(state, surface_area, mass):
         a_drag = np.array([0.0, 0.0, 0.0])  # No drag if not moving
     return a_drag
 
-# def drag_acceleration(state, surface_area, mass):
-#     x, y, z, vx, vy, vz = state
-#     r = np.sqrt(x**2 + y**2 + z**2)
-#     altitude = r - radius_earth  # altitude in km
-#     rho = atmospheric_density(altitude)  # density in kg/m^3
-
-#     velocity = np.array([vx * 1000, vy * 1000, vz * 1000])  # convert km/s to m/s
-#     v = np.linalg.norm(velocity)  # total velocity magnitude in m/s
-
-#     if v > 0:  # Avoid division by zero
-#         # Calculate the drag coefficient
-#         characteristic_dimension = 3.45  # diameter of S1 in meters
-#         kinematic_viscosity = 1.48e-5  # kinematic viscosity of air in m^2/s
-#         reynolds = v * characteristic_dimension / kinematic_viscosity  # Reynolds number
-#         drag_coefficient = get_drag_coefficient(reynolds)  # Cd from your interpolation function
-
-#         # Drag force vector
-#         F_drag = -0.5 * rho * v**2 * drag_coefficient * surface_area * (velocity / v)  # N
-
-#         # Drag acceleration vector
-#         a_drag = F_drag / mass  # N/kg = m/s^2
-
-#         # Convert drag acceleration to km/s^2
-#         a_drag_km_s2 = a_drag * 1e-3  # convert m/s^2 to km/s^2
-#     else:
-#         a_drag_km_s2 = np.array([0.0, 0.0, 0.0])  # No drag if not moving
-
-#     return a_drag_km_s2  # return as 3D array [ax, ay, az]
-
 def two_body_equations_with_drag(t, state, mu, surface_area, mass):
     x, y, z, vx, vy, vz = state
     r = np.sqrt(x**2 + y**2 + z**2) # in km
@@ -187,12 +157,17 @@ def propagate_trajectory_with_drag(event_name, surface_area, mass,
     print(f"Propagation complete. Results saved to {output_filename}")
 
 
-# # Example usage S1
+# # Example usage S1-S2
 # event_name = 's1s2_separation'  # Define the event name you want to propagate from
 # propagate_trajectory_with_drag(event_name, surface_area=28.1175, mass=((1.79408515641864E+01 - 1.23e1)*1e3)) 
 # # eg for S1 length is 8.15 and diameter is 3.45m, Cd is ~1 for Reynolds <2*10^5 Then it falls to 0.2-0.3. For flow speed=0.8km/s the Re=7*10^6, which would be Re=0.3 S1 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
 
-# # Example usage S2
+# # Example usage S2-S3
 # event_name = 's2s3_separation'  # Define the event name you want to propagate from
 # propagate_trajectory_with_drag(event_name, surface_area=7.18, mass=((3.01735153404769E+00 -  1.08735152707548E+00)*1e3)) 
-# # eg for S1 length is 3.338m and diameter is 2.15m, mass isS1 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
+# # eg for S2 length is 3.338m and diameter is 2.15m, mass is S2 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
+
+# # Example usage S2-fairing
+# event_name = 's2fairing_separation'  # Define the event name you want to propagate from
+# propagate_trajectory_with_drag(event_name, surface_area=17.2, mass = (( 1.04228914258135E+01 - 1.01628914258135E+01)*1e3)) 
+# # eg for fairing length L3 is 8m and diameter is 2.15m, mass is fairing dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
