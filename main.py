@@ -41,6 +41,8 @@ from functions_def import get_altitude
 from functions_def import get_state_vector
 from functions_def import save_state_vectors_to_csv
 from functions_def import reset_state_vectors
+from impact_with_drag_propagator import propagate_trajectory_with_drag
+from existing_trajectory_loader import trajectory_from_excel_to_csv
 from j2000_to_kml import propagate_and_convert
 
 # Specify the column name you are looking for
@@ -183,11 +185,38 @@ kick_stage_dry_mass = 200 # kg, from assumption, in reality it should be around 
 payload_mass = final_masses[0]*1e3 - (kick_stage_dry_mass + final_masses[1]) # final total mass (in Mg converted to kg) minus the dry mass and the final propellant mass
 print(f"total final mass: {final_masses[0]*1e3} kg, final propellant mass: {final_masses[1]} kg, assumed s3 inert mass: {kick_stage_dry_mass} kg, resulting payload mass: {payload_mass} kg")
 
+#### Propagating state vectors for separation trajectories, and loading full trajectory of rocket to csv
+# Example usage S1-S2
+event_name = 's1s2_separation'  # Define the event name you want to propagate from
+propagate_trajectory_with_drag(event_name, surface_area=28.1175, mass=((1.79408515641864E+01 - 1.23e1)*1e3)) 
+# eg for S1 length is 8.15 and diameter is 3.45m, Cd is ~1 for Reynolds <2*10^5 Then it falls to 0.2-0.3. For flow speed=0.8km/s the Re=7*10^6, which would be Re=0.3 S1 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
+
+# Example usage S2-S3
+event_name = 's2s3_separation'  # Define the event name you want to propagate from
+propagate_trajectory_with_drag(event_name, surface_area=7.18, mass=((3.01735153404769E+00 -  1.08735152707548E+00)*1e3)) 
+# eg for S2 length is 3.338m and diameter is 2.15m, mass is S2 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
+
+# Example usage S2-fairing
+event_name = 's2fairing_separation'  # Define the event name you want to propagate from
+propagate_trajectory_with_drag(event_name, surface_area=17.2, mass = (( 1.04228914258135E+01 - 1.01628914258135E+01)*1e3)) 
+# eg for fairing length L3 is 8m and diameter is 2.15m, mass is fairing dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
+
+# Full trajectory
+excel_file_path = '/home/fabiomeloni/flight_safety/traiettoria.xlsx'  # Change to your actual Excel file path
+output_csv_path = "state_vector_full_trajectory.csv"  # Change to your desired CSV output path
+event_name = 'full_trajectory'  # Set the event name you want to associate with this trajectory
+# Convert Excel to CSV
+trajectory_from_excel_to_csv(excel_file_path, output_csv_path, event_name)
+print(f"Full trajectory successfully converted to {output_csv_path}")
+
 #### Exporting KML for trajectories
-event_names = ['drag_s1s2_separation', 'drag_s2fairing_separation', 'drag_s2s3_separation']
+event_names = ['drag_s1s2_separation', 'drag_s2fairing_separation', 'drag_s2s3_separation', 'full_trajectory']
 csv_filenames = []
 for event_name in event_names:
-    csv_filename = f"propagated_state_vector_{event_name}.csv"  # Make sure this file exists
+    if event_name == 'full_trajectory':
+        csv_filename = f"state_vector_{event_name}.csv"
+    else:
+        csv_filename = f"propagated_state_vector_{event_name}.csv"  # Make sure this file exists
     csv_filenames.append(csv_filename)
 for event_name, csv_filename in zip(event_names, csv_filenames):
     propagate_and_convert(csv_filename, event_name)
