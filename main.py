@@ -207,7 +207,6 @@ output_csv_path = "state_vector_full_trajectory.csv"  # Change to your desired C
 event_name = 'full_trajectory'  # Set the event name you want to associate with this trajectory
 # Convert Excel to CSV
 trajectory_from_excel_to_csv(excel_file_path, output_csv_path, event_name)
-print(f"Full trajectory successfully converted to {output_csv_path}")
 
 #### Exporting KML for trajectories
 event_names = ['drag_s1s2_separation', 'drag_s2fairing_separation', 'drag_s2s3_separation', 'full_trajectory']
@@ -220,4 +219,3 @@ for event_name in event_names:
     csv_filenames.append(csv_filename)
 for event_name, csv_filename in zip(event_names, csv_filenames):
     propagate_and_convert(csv_filename, event_name)
-    # print(f'exported KML of {event_name} as {csv_filename}')
