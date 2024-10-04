@@ -101,8 +101,10 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name):
     Returns:
         None: The function writes the KML output to a file.
     """
-    impact_radius = get_impact_radius(event_name)
-
+    # Skip getting the impact radius if the event is 'full_trajectory'
+    if event_name != 'full_trajectory':
+        impact_radius = get_impact_radius(event_name)
+    
     # Create KML document structure
     kml_doc = KML.kml(
         KML.Document(
@@ -144,31 +146,35 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name):
                     )
                 )
             ),
-            # Add a filled circle around the impact point
-            KML.Placemark(
-                KML.name("Impact Area"),
-                KML.Style(
-                    KML.LineStyle(
-                        KML.color("ff0000ff"),  # Outline color (red)
-                        KML.width(2)
-                    ),
-                    KML.PolygonStyle(
-                        KML.color("7f0000ff"),  # Fill color (semi-transparent red)
-                        KML.outline(False)       # Disable outline for polygon
-                    )
-                ),
-                KML.Polygon(
-                    KML.outerBoundaryIs(
-                        KML.LinearRing(
-                            KML.coordinates(
-                                " ".join(
-                                    f"{longitudes[-1] + (impact_radius / 111.32) * math.cos(math.radians(angle)) / math.cos(math.radians(latitudes[-1]))},{latitudes[-1] + (impact_radius / 111.32) * math.sin(math.radians(angle))},0"
-                                    for angle in range(0, 360, 10)  # 36 points to make a circle
+            # Add a filled circle around the impact point if the event is not 'full_trajectory'
+            *(
+                [
+                    KML.Placemark(
+                        KML.name("Impact Area"),
+                        KML.Style(
+                            KML.LineStyle(
+                                KML.color("ff0000ff"),  # Outline color (red)
+                                KML.width(2)
+                            ),
+                            KML.PolygonStyle(
+                                KML.color("7f0000ff"),  # Fill color (semi-transparent red)
+                                KML.outline(False)       # Disable outline for polygon
+                            )
+                        ),
+                        KML.Polygon(
+                            KML.outerBoundaryIs(
+                                KML.LinearRing(
+                                    KML.coordinates(
+                                        " ".join(
+                                            f"{longitudes[-1] + (impact_radius / 111.32) * math.cos(math.radians(angle)) / math.cos(math.radians(latitudes[-1]))},{latitudes[-1] + (impact_radius / 111.32) * math.sin(math.radians(angle))},0"
+                                            for angle in range(0, 360, 10)  # 36 points to make a circle
+                                        )
+                                    )
                                 )
                             )
                         )
                     )
-                )
+                ] if event_name != 'full_trajectory' else []
             )
         )
     )
@@ -176,10 +182,6 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name):
     # Save to KML file
     with open(f"kml_trajectory_{event_name}.kml", "wb") as kml_file:
         kml_file.write(etree.tostring(kml_doc, pretty_print=True))
-
-    # # Save to KML file
-    # with open(f"kml_trajectory_{event_name}.kml", "wb") as kml_file:
-    #     kml_file.write(etree.tostring(kml_doc, pretty_print=True))
 
 def propagate_and_convert(csv_filename, event_name):
     """
