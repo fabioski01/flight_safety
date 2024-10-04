@@ -70,9 +70,8 @@ def convert_j2000_to_geographic(x, y, z, event_time):
     alt = itrs.spherical.distance.to(u.km).value
 
     # Debugging information to check values
-    print(f"J2000 Coordinates: x={x}, y={y}, z={z}, Time={event_time}")
-    print(f"Converted Geographic Coordinates: lat={lat}, lon={lon}, alt={alt}")
-
+    # print(f"J2000 Coordinates: x={x}, y={y}, z={z}, Time={event_time}")
+    # print(f"Converted Geographic Coordinates: lat={lat}, lon={lon}, alt={alt}")
     return lat, lon, alt
 
 def convert_seconds_to_iso(seconds):
@@ -178,9 +177,9 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name):
     with open(f"kml_trajectory_{event_name}.kml", "wb") as kml_file:
         kml_file.write(etree.tostring(kml_doc, pretty_print=True))
 
-    # Save to KML file
-    with open(f"kml_trajectory_{event_name}.kml", "wb") as kml_file:
-        kml_file.write(etree.tostring(kml_doc, pretty_print=True))
+    # # Save to KML file
+    # with open(f"kml_trajectory_{event_name}.kml", "wb") as kml_file:
+    #     kml_file.write(etree.tostring(kml_doc, pretty_print=True))
 
 def propagate_and_convert(csv_filename, event_name):
     """
@@ -225,7 +224,8 @@ def propagate_and_convert(csv_filename, event_name):
             altitudes.append(alt)
 
     save_kml_output(latitudes, longitudes, altitudes, event_name)
+    print(f'KML file of {event_name} exported')
 
-# Example usage
-csv_filename = f"propagated_state_vector_{event_name}.csv"  # Make sure this file exists
-propagate_and_convert(csv_filename, event_name)
+# # Example usage
+# csv_filename = f"propagated_state_vector_{event_name}.csv"  # Make sure this file exists
+# propagate_and_convert(csv_filename, event_name)

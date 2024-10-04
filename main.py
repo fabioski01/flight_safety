@@ -41,6 +41,7 @@ from functions_def import get_altitude
 from functions_def import get_state_vector
 from functions_def import save_state_vectors_to_csv
 from functions_def import reset_state_vectors
+from j2000_to_kml import propagate_and_convert
 
 # Specify the column name you are looking for
 column_name = "thrust~Engine_1_Up:Rocket"
@@ -181,3 +182,13 @@ final_masses = [numeric_array[-1, row_index] for row_index in row_indexes] # fir
 kick_stage_dry_mass = 200 # kg, from assumption, in reality it should be around 350 kg
 payload_mass = final_masses[0]*1e3 - (kick_stage_dry_mass + final_masses[1]) # final total mass (in Mg converted to kg) minus the dry mass and the final propellant mass
 print(f"total final mass: {final_masses[0]*1e3} kg, final propellant mass: {final_masses[1]} kg, assumed s3 inert mass: {kick_stage_dry_mass} kg, resulting payload mass: {payload_mass} kg")
+
+#### Exporting KML for trajectories
+event_names = ['drag_s1s2_separation', 'drag_s2fairing_separation', 'drag_s2s3_separation']
+csv_filenames = []
+for event_name in event_names:
+    csv_filename = f"propagated_state_vector_{event_name}.csv"  # Make sure this file exists
+    csv_filenames.append(csv_filename)
+for event_name, csv_filename in zip(event_names, csv_filenames):
+    propagate_and_convert(csv_filename, event_name)
+    # print(f'exported KML of {event_name} as {csv_filename}')
