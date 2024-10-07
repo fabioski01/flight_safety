@@ -33,29 +33,21 @@ file_path = '/home/fabiomeloni/flight_safety/traiettoria.xlsx'
 string_array, numeric_array = load_excel_as_two_arrays(file_path)
 
 # Ignition S1 engine based on thrust of engine 1, and main engine cut-off (MECO)
-
-from functions_def import find_first_and_last_nonzero
-from functions_def import find_column_index
-from functions_def import get_time
-from functions_def import get_altitude
-from functions_def import get_state_vector
-from functions_def import save_state_vectors_to_csv
-from functions_def import reset_state_vectors
+from functions_def import *
 from impact_with_drag_propagator import propagate_trajectory_with_drag
 from existing_trajectory_loader import trajectory_from_excel_to_csv
 from j2000_to_kml import propagate_and_convert
 
-# Specify the column name you are looking for
 column_name = "thrust~Engine_1_Up:Rocket"
-
 # Find the first and last non-zero values in the numeric column
 first_index, last_index, first_value, last_value = find_first_and_last_nonzero(column_name, string_array, numeric_array)
 
-# get time, altitude, state vector
-# time
+### get time, stage dry mass, altitude, and state vector
+# time and stage dry mass
 ignition_s1_time = get_time(first_index, string_array, numeric_array) # start of S1 thrust
 meco_time = get_time(last_index, string_array, numeric_array) # end of S1 thrust (main engine cut-off)
-
+s1_dry_mass = get_stage_dry_mass(last_index, string_array, numeric_array) # dry mass of S1 for impact area and trajectory computation
+print(f'Dry mass of s1 is: {s1_dry_mass} kg')
 # altitude
 ignition_s1_altitude = get_altitude(first_index, string_array, numeric_array) # start of S1 thrust
 meco_altitude = get_altitude(last_index, string_array, numeric_array) # end of S1 thrust (main engine cut-off)
@@ -71,19 +63,19 @@ save_state_vectors_to_csv(output_csv_path)
 print(f"S1 ignition index: {first_index + 5},    timestamp: {ignition_s1_time} s,                altitude: {ignition_s1_altitude} km,   state vector: {ignition_s1_state} km-km/s")
 print(f"MECO index: {last_index + 5},         timestamp: {meco_time} s,   altitude: {meco_altitude} km,     state vector: {meco_state} km-km/s")
 
-# Ignition S2 engine based on thrust of engine 2, and second engine cut-off (SECO)
-
+### Ignition S2 engine based on thrust of engine 2, and second engine cut-off (SECO)
 # Specify the column name you are looking for
 column_name = "thrust~Engine_2_Linear:Rocket"
 
 # Find the first and last non-zero values in the numeric column
 first_index, last_index, first_value, last_value = find_first_and_last_nonzero(column_name, string_array, numeric_array)
 
-# get time, altitude, state vector
-# time
+### get time, stage dry mass, altitude, and state vector
+# time and stage dry mass
 ignition_s2_time = get_time(first_index, string_array, numeric_array) # start of S2 thrust
 seco_time = get_time(last_index, string_array, numeric_array) # end of S2 thrust (second engine cut-off)
-
+s2_dry_mass = get_stage_dry_mass(last_index, string_array, numeric_array) # dry mass of S2 for impact area and trajectory computation
+print(f'Dry mass of s2 is: {s2_dry_mass} kg')
 # altitude
 ignition_s2_altitude = get_altitude(first_index, string_array, numeric_array) # start of S2 thrust
 seco_altitude = get_altitude(last_index, string_array, numeric_array) # end of S2 thrust (second engine cut-off)
@@ -96,16 +88,15 @@ save_state_vectors_to_csv(output_csv_path)
 print(f"S2 ignition index: {first_index + 5},    timestamp: {ignition_s2_time} s,    altitude: {ignition_s2_altitude} km,   state vector: {ignition_s2_state} km-km/s")
 print(f"SECO index: {last_index + 5},           timestamp: {seco_time} s,    altitude: {seco_altitude} km,   state vector: {seco_state} km-km/s")
 
-# Ignition S3 engine based on thrust of engine 3, and third engine cut-off (TECO)
-
+### Ignition S3 engine based on thrust of engine 3, and third engine cut-off (TECO)
 # Specify the column name you are looking for
 column_name = "thrust~Engine_3_Linear:Rocket"
 
 # Find the first and last non-zero values in the numeric column
 first_index, last_index, first_value, last_value = find_first_and_last_nonzero(column_name, string_array, numeric_array)
 
-# get time, altitude, state vector
-# time
+### get time, stage dry mass, altitude, and state vector
+# time and stage dry mass
 ignition_s3_time = get_time(first_index, string_array, numeric_array) # start of S3 thrust
 teco_time = get_time(last_index, string_array, numeric_array) # end of S3 thrust (second engine cut-off)
 
@@ -162,8 +153,7 @@ print(f"S1/S2 separation index: {s1s2_separation_index + 5},                  ti
 print(f"Fairing separation (during S2) index: {s2fairing_separation_index + 5},    timestamp: {s2fairing_separation_time} s,    altitude: {s2fairing_separation_altitude} km, Previous S2 rocket length with fairing: {s2fairing_separation_value} m,    New S2 rocket length without fairing: {s2s3_separation_value} m,  state vector: {s2s3_separation_state} km-km/s")
 print(f"S2/S3 separation index: {s2s3_separation_index + 5},                  timestamp: {s2s3_separation_time} s,    altitude: {s2s3_separation_altitude} km, Previous S2 rocket length without fairing: {s2s3_separation_value} m,  New S3 rocket length: {s3_final_value} m,     state vector: {s2s3_separation_state} km-km/s")
 
-# Maximum Dynamic Pressure (Q) Event
-
+### Maximum Dynamic Pressure (Q) Event
 from functions_def import find_max
 
 column_name = "dynamic_pressure~Rocket"
@@ -177,7 +167,6 @@ save_state_vectors_to_csv(output_csv_path)
 print(f"Maximum value of Dynamic Pressure: {max_value} Pa, excel row index: {max_index+5}, timestamp: {maxQ_time} s, altitude: {maxQ_altitude} km, state vector: {maxQ_state} km-km/s")
 
 # Payload Capability assuming 200 kg of dry-mass for the kick-stage (S3)
-
 column_names = ["mass_total~Rocket", "PROP_MASS~Stage_3:Rocket"] # total mass of rocket (Mg) in column221 HM, propellant mass of stage 3 of rocket (Kg) in column 252 IR
 row_indexes = [find_column_index(string_array, column_name) for column_name in column_names] # first is the total, second is the s3 prop propellant mass
 final_masses = [numeric_array[-1, row_index] for row_index in row_indexes] # first is the final total mass, second is the final s3 propellant mass
@@ -188,12 +177,12 @@ print(f"total final mass: {final_masses[0]*1e3} kg, final propellant mass: {fina
 #### Propagating state vectors for separation trajectories, and loading full trajectory of rocket to csv
 # Example usage S1-S2
 event_name = 's1s2_separation'  # Define the event name you want to propagate from
-propagate_trajectory_with_drag(event_name, surface_area=28.1175, mass=((1.79408515641864E+01 - 1.23e1)*1e3)) 
+propagate_trajectory_with_drag(event_name, surface_area=28.1175, mass=s1_dry_mass) 
 # eg for S1 length is 8.15 and diameter is 3.45m, Cd is ~1 for Reynolds <2*10^5 Then it falls to 0.2-0.3. For flow speed=0.8km/s the Re=7*10^6, which would be Re=0.3 S1 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
 
 # Example usage S2-S3
 event_name = 's2s3_separation'  # Define the event name you want to propagate from
-propagate_trajectory_with_drag(event_name, surface_area=7.18, mass=((3.01735153404769E+00 -  1.08735152707548E+00)*1e3)) 
+propagate_trajectory_with_drag(event_name, surface_area=7.18, mass=s2_dry_mass) 
 # eg for S2 length is 3.338m and diameter is 2.15m, mass is S2 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
 
 # Example usage S2-fairing
