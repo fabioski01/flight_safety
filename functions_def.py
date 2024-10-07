@@ -122,6 +122,44 @@ def get_altitude(row_index, string_array, numeric_array):
 
     return altitude_value
 
+def get_mass(row_index, string_array, numeric_array):
+    """
+    Function to find the mass of the rocket at the given row (timestamp).
+    Generally to be used to get the dry mass of each stage by comparing the mass just before stage separation with the mass immediatly after.
+
+    Parameters:
+    - row_index: int : index representing the row number which contains the event value
+    - string_array: np.ndarray : NumPy array containing string data (first 4 rows)
+    - numeric_array: np.ndarray : NumPy array containing the data from row 5 onwards as floats
+    
+    Returns:
+    - event_time: float: MASS of the event
+    """
+    # Specify the column name to find MASS column
+    column_name = "mass_total~Rocket" # Altitude of Rocket at Earth
+    mass_col_index = find_column_index(string_array, column_name)
+    mass_value = float(numeric_array[row_index, mass_col_index])*1e3 # convert Mg (megagrams) to Kg
+
+    return mass_value
+
+def get_stage_dry_mass(row_index, string_array, numeric_array):
+    """
+    Function to find the dry mass mass of a rocket stage.
+    Generally to be used by the drag propagators.
+    There could be an error (very low) due to the propellant mass immediatly burned at second or third engine ignition. In this case, the dry mass considered could be overestimated (by grams)
+
+    Parameters:
+    - row_index: int : index representing the row number which contains the event value
+    - string_array: np.ndarray : NumPy array containing string data (first 4 rows)
+    - numeric_array: np.ndarray : NumPy array containing the data from row 5 onwards as floats
+    
+    Returns:
+    - event_time: float: MASS of the event
+    """
+    # Specify the column name to find stage dry mass
+    dry_mass = get_mass(row_index, string_array, numeric_array) - get_mass(row_index+1, string_array, numeric_array)
+    return dry_mass
+
 def find_multiple_phase_transitions(column_name, string_array, numeric_array, tolerance=1e-2):
     """
     Generalized function to detect multiple constant phases followed by a transition to decreasing values.
