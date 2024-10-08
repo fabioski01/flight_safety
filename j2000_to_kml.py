@@ -23,15 +23,16 @@ The script is intended for use in launch vehicle simulations, particularly to vi
 impact points and areas of spent rocket stages and other components.
 """
 
-
 import csv
 from astropy import units as u
 from astropy.coordinates import GCRS, ITRS, CartesianRepresentation
 from astropy.time import Time
 from lxml import etree
-from pykml.factory import KML_ElementMaker as KML
-import math
+from pykml.factory import KML_ElementMaker as KML # libraries for KML exports
+import simplekml # import KML  # to match KML style of other flight safety exports
+import math # for impact radius
 from perturbations import get_impact_radius
+
 
 # Define the event name (example)
 # event_name = 'drag_s1s2_separation'
@@ -89,7 +90,7 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name):
     Saves the trajectory and impact information to a KML file for visualization in mapping applications.
     """
     # Earth's radius in kilometers (mean value)
-    earth_radius_km = 6371
+    earth_radius_km = 6361.89959939 # this is a hotfix so that the earth radius matches the starting altitude (which should be around 21m SL, but in most simulations is around 30m SL)
 
     # Adjust altitudes to be relative to ground level (in meters)
     altitudes_relative_to_ground = [(alt - earth_radius_km) * 1000 for alt in altitudes]  # Now in meters
@@ -97,16 +98,26 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name):
     # Skip getting the impact radius if the event is 'full_trajectory'
     if event_name != 'full_trajectory':
         impact_radius = get_impact_radius(event_name)
-    
+
     # Create KML document structure
     kml_doc = KML.kml(
         KML.Document(
             KML.name(f"Trajectory {event_name}"),
             
+            # Create Style for LineString
+            KML.Style(
+                KML.LineStyle(
+                    KML.color("ff0000ff"),  # Line color (red) / yellow is
+                    KML.width(5)             # Line width
+                ),
+                id="19050"  # Style ID
+            ),
+            
             # Add Separation Point Placemark
             KML.Placemark(
                 KML.name(f"Separation Point {event_name}"),
                 KML.Point(
+                    KML.altitudeMode("relativeToGround"),  # Set altitude mode
                     KML.coordinates(f"{longitudes[0]},{latitudes[0]},{altitudes_relative_to_ground[0]}")
                 ),
                 KML.Style(
@@ -118,17 +129,24 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name):
                 )
             ),
             
+            # Trajectory LineString Placemark
             KML.Placemark(
                 KML.name(f"Trajectory {event_name}"),
                 KML.LineString(
+                    KML.extrude(1),  # Enable extrusion
+                    KML.altitudeMode("relativeToGround"),  # Set altitude mode
                     KML.coordinates(
                         " ".join(f"{lon},{lat},{alt}" for lon, lat, alt in zip(longitudes, latitudes, altitudes_relative_to_ground))
                     )
-                )
+                ),
+                KML.styleUrl("#19050")  # Link to the LineStyle defined above
             ),
+            
+            # Add Impact Point Placemark
             KML.Placemark(
                 KML.name(f"Impact Point {event_name}"),
                 KML.Point(
+                    KML.altitudeMode("relativeToGround"),  # Set altitude mode
                     KML.coordinates(f"{longitudes[-1]},{latitudes[-1]},{altitudes_relative_to_ground[-1]}")
                 ),
                 KML.Style(
@@ -171,6 +189,10 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name):
             )
         )
     )
+
+    # Save to KML file
+    with open(f"kml_trajectory_{event_name}.kml", "wb") as kml_file:
+        kml_file.write(etree.tostring(kml_doc, pretty_print=True, xml_declaration=True, encoding='UTF-8'))
 
     # Save to KML file
     with open(f"kml_trajectory_{event_name}.kml", "wb") as kml_file:
