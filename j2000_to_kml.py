@@ -52,26 +52,22 @@ def convert_j2000_to_geographic(x, y, z, event_time):
         tuple: A tuple containing:
             - lat (float): Latitude in degrees.
             - lon (float): Longitude in degrees.
-            - alt (float): Altitude in kilometers.
+            - alt (float): Altitude in **meters**.
     """
-    # Convert the time to an ISO format string
     iso_time = convert_seconds_to_iso(event_time)
     cartesian = CartesianRepresentation(x * u.km, y * u.km, z * u.km)
 
-    # Create a GCRS coordinate object
-    gcrs = GCRS(cartesian, obstime=Time(iso_time)) #   A coordinate or frame in the Geocentric Celestial Reference System (GCRS). GCRS is distinct form ICRS mainly in that it is relative to the Earth's center-of-mass rather than the solar system Barycenter.
+    # GCRS coordinate (Geocentric Celestial Reference System)
+    gcrs = GCRS(cartesian, obstime=Time(iso_time))
 
-    # Transform to ITRS (Inertial Terrestrial Reference System)
-    itrs = gcrs.transform_to(ITRS(obstime=Time(iso_time))) # A coordinate or frame in the International Terrestrial Reference System (ITRS). Topocentric ITRS frames are convenient for observations of near Earth objects where stellar aberration is not included.
+    # Convert to ITRS (International Terrestrial Reference System)
+    itrs = gcrs.transform_to(ITRS(obstime=Time(iso_time)))
 
-    # Extract latitude, longitude, and altitude
+    # Extract lat, lon, alt
     lat = itrs.spherical.lat.degree
     lon = itrs.spherical.lon.degree
-    alt = itrs.spherical.distance.to(u.km).value
+    alt = itrs.spherical.distance.to(u.km).value  # Convert altitude from kilometers to meters
 
-    # Debugging information to check values
-    # print(f"J2000 Coordinates: x={x}, y={y}, z={z}, Time={event_time}")
-    # print(f"Converted Geographic Coordinates: lat={lat}, lon={lon}, alt={alt}")
     return lat, lon, alt
 
 def convert_seconds_to_iso(seconds):
@@ -91,16 +87,13 @@ def convert_seconds_to_iso(seconds):
 def save_kml_output(latitudes, longitudes, altitudes, event_name):
     """
     Saves the trajectory and impact information to a KML file for visualization in mapping applications.
-
-    Args:
-        latitudes (list of float): List of latitudes in degrees.
-        longitudes (list of float): List of longitudes in degrees.
-        altitudes (list of float): List of altitudes in kilometers.
-        event_name (str): The name of the event associated with the trajectory, used for naming and distinguishing outputs.
-
-    Returns:
-        None: The function writes the KML output to a file.
     """
+    # Earth's radius in kilometers (mean value)
+    earth_radius_km = 6371
+
+    # Adjust altitudes to be relative to ground level (in meters)
+    altitudes_relative_to_ground = [(alt - earth_radius_km) * 1000 for alt in altitudes]  # Now in meters
+
     # Skip getting the impact radius if the event is 'full_trajectory'
     if event_name != 'full_trajectory':
         impact_radius = get_impact_radius(event_name)
@@ -114,7 +107,7 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name):
             KML.Placemark(
                 KML.name(f"Separation Point {event_name}"),
                 KML.Point(
-                    KML.coordinates(f"{longitudes[0]},{latitudes[0]},{altitudes[0]}")
+                    KML.coordinates(f"{longitudes[0]},{latitudes[0]},{altitudes_relative_to_ground[0]}")
                 ),
                 KML.Style(
                     KML.IconStyle(
@@ -129,14 +122,14 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name):
                 KML.name(f"Trajectory {event_name}"),
                 KML.LineString(
                     KML.coordinates(
-                        " ".join(f"{lon},{lat},{alt}" for lon, lat, alt in zip(longitudes, latitudes, altitudes))
+                        " ".join(f"{lon},{lat},{alt}" for lon, lat, alt in zip(longitudes, latitudes, altitudes_relative_to_ground))
                     )
                 )
             ),
             KML.Placemark(
                 KML.name(f"Impact Point {event_name}"),
                 KML.Point(
-                    KML.coordinates(f"{longitudes[-1]},{latitudes[-1]},{altitudes[-1]}")
+                    KML.coordinates(f"{longitudes[-1]},{latitudes[-1]},{altitudes_relative_to_ground[-1]}")
                 ),
                 KML.Style(
                     KML.IconStyle(
