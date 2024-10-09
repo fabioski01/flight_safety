@@ -24,18 +24,16 @@ The script is intended for use in launch vehicle simulations, particularly to co
 propagate trajectories and impact points for spent rocket stages and other components.
 """
 
-
 import numpy as np
 import csv
 from scipy.integrate import solve_ivp
 from pyatmos import coesa76
 from scipy.interpolate import interp1d
+from functions_def import convert_j2000_to_wgs84, earth_radius_at_latitude, convert_j2000_to_geographic
 
 # Define constants
 mu_earth = 398600.4418  # Earth's gravitational parameter, km^3/s^2
-radius_earth = 6371  # Earth's radius in km. This is a source of error since it is not constant along the earth's latitude as it is a spheroid. At Shetland latitude (60.8161 in decimals), the Earth's radius is 6361.869 km at sea level. This means that the impact points in reality could be "before" the simulated ones (e.g. impact points in the equatorial zone where the radius is 6378.137 km well over the average 6371 km considered), or "after" the simulated ones (e.g. for impact points in the polar zones since there the Earth's radius is 6356.752km). The latter one should be the case for S1, fairing, and S2 impact points as they are all inside the artic circle. A "get_radius" function should be written for accurate impact point estimation (https://rechneronline.de/earth-radius/). Of course, the Earth is not  perfect spheroid since its mass is not perfectly evenly distributed.
 
-# Function to read the state vector from the CSV file based on event name
 # Function to read the state vector from the CSV file based on event name
 def load_state_vector_from_csv(event_name, csv_filename='state_vectors.csv'):
     """
@@ -81,6 +79,28 @@ def load_state_vector_from_csv(event_name, csv_filename='state_vectors.csv'):
     # Raise an error if the event name is not found
     raise ValueError(f"Event name '{event_name}' not found in {csv_filename}")
 
+def earth_radius_from_j2000(state7):
+    """
+    Calculate the Earth's radius from a J2000 state vector (x, y, z) at a given event time.
+    
+    Args:
+        Args:
+        state7 (array-like): A 7-element array representing the state vector [time, x, y, z, vx, vy, vz], 
+                            where time is flight time in seconds, x, y, z are the positions in km, and vx, vy, vz are the velocities in km/s.    
+    Returns:
+        float: Earth's radius at the corresponding latitude in kilometers.
+    """
+    # Convert J2000 state vector to geographic latitude
+    x, y, z = state7[1:4]
+    event_time = state7[0]
+    lat, lon, alt = convert_j2000_to_geographic(x, y, z, event_time)
+    
+    # Calculate Earth's radius at that latitude
+    earth_radius = earth_radius_at_latitude(lat)
+    # print(f'latitude from earth_radius_from_j2000(state7):{lat}')
+    # print(f'earth radius from earth_radius_from_j2000(state7): {earth_radius}')
+    return earth_radius # in km 
+
 def atmospheric_density(altitude):
     """
     Returns the air density at a given altitude using pyatmosphere's COESA 1976 model.
@@ -116,21 +136,22 @@ def get_drag_coefficient(Reynolds):
     else:
         return cd_interp(Reynolds)
 
-def drag_acceleration(state, surface_area, mass):
+def drag_acceleration(state7, surface_area, mass):
     """
     Computes the acceleration due to drag on an object in the atmosphere, given its state vector, surface area, and mass.
     
     Args:
-        state (array-like): A 6-element array representing the state vector [x, y, z, vx, vy, vz], 
-                            where x, y, z are the positions in km, and vx, vy, vz are the velocities in km/s.
+        state7 (array-like): A 7-element array representing the state vector [time, x, y, z, vx, vy, vz], 
+                            where time is flight time in seconds, x, y, z are the positions in km, and vx, vy, vz are the velocities in km/s.
         surface_area (float): The surface area of the object in square meters.
         mass (float): The mass of the object in kilograms.
     
     Returns:
         list: A 3-element list representing the drag acceleration in km/s² in the x, y, and z directions.
     """
-    x, y, z, vx, vy, vz = state
+    x, y, z, vx, vy, vz = state7[1:]
     r = np.sqrt(x**2 + y**2 + z**2)
+    radius_earth = earth_radius_from_j2000(state7)
     altitude = r - radius_earth # this makes sense
     rho = atmospheric_density(altitude)
 
@@ -161,13 +182,13 @@ def drag_acceleration(state, surface_area, mass):
         a_drag = np.array([0.0, 0.0, 0.0])  # No drag if not moving
     return a_drag
 
-def two_body_equations_with_drag(t, state, mu, surface_area, mass):
+def two_body_equations_with_drag(t, state7, mu, surface_area, mass):
     """
     Computes the state derivatives for a two-body problem with atmospheric drag.
 
     Args:
         t (float): The current time (not used in this implementation, but necessary for ode solvers).
-        state (list): The current state vector [x, y, z, vx, vy, vz], where (x, y, z) are the position coordinates in kilometers,
+        state7 (list): The current state vector [time, x, y, z, vx, vy, vz], where time is flight time in seconds, (x, y, z) are the position coordinates in kilometers,
                       and (vx, vy, vz) are the velocity components in kilometers per second.
         mu (float): The gravitational parameter (GM) of the central body (Earth) in km^3/s^2.
         surface_area (float): The surface area of the spacecraft in square meters.
@@ -176,7 +197,7 @@ def two_body_equations_with_drag(t, state, mu, surface_area, mass):
     Returns:
         list: A list containing the derivatives [vx, vy, vz, ax, ay, az], where (ax, ay, az) are the accelerations in kilometers per second squared.
     """
-    x, y, z, vx, vy, vz = state
+    x, y, z, vx, vy, vz = state7[1:] # skips time which is first element
     r = np.sqrt(x**2 + y**2 + z**2) # in km
     
     # Gravitational acceleration
@@ -185,7 +206,7 @@ def two_body_equations_with_drag(t, state, mu, surface_area, mass):
     az = -mu * z / r**3 # in km/s2
 
     # Drag acceleration
-    a_drag = drag_acceleration(state, surface_area, mass) # list of 3 in in km/s2
+    a_drag = drag_acceleration(state7, surface_area, mass) # list of 3 in in km/s2
 
     # Total accelerations
     ax += a_drag[0] # in km/s2
@@ -194,14 +215,14 @@ def two_body_equations_with_drag(t, state, mu, surface_area, mass):
 
     return [vx, vy, vz, ax, ay, az] # in km/s and km/s2
 
-def impact_condition(t, state, mu, surface_area, mass):
+def impact_condition(t, state6, mu, surface_area, mass):
     """
     Event function to detect when the spacecraft impacts the Earth's surface.
 
     Args:
         t (float): Current time in seconds during the simulation.
-        state (array-like): A 6-element array representing the state vector [x, y, z, vx, vy, vz], 
-                            where x, y, z are the positions in km.
+        state6 (array-like): A 6-element array representing the state vector [x, y, z, vx, vy, vz], 
+                            where x, y, z are the positions in km. This is imported from the solve_ivp
         mu (float): Standard gravitational parameter for the Earth (in km³/s²).
         surface_area (float): The surface area of the spacecraft in square meters.
         mass (float): The mass of the spacecraft in kilograms.
@@ -210,9 +231,13 @@ def impact_condition(t, state, mu, surface_area, mass):
         float: The difference between the current radial distance of the spacecraft from Earth's center and the Earth's radius.
                The event triggers when this value is zero (i.e., when the spacecraft reaches the surface of the Earth).
     """
-    x, y, z = state[:3]
+    x, y, z, vx, vy, vz = state6 # skips first element which is time
     r = np.sqrt(x**2 + y**2 + z**2) # in km
-    return r - radius_earth  # Trigger event when r = Earth's radius
+
+    state7 = [t] + list(state6) # reconstruct state7 needed to get latitude to get earth radius
+    radius_earth = earth_radius_from_j2000(state7)
+    # print(f'earth radius from impact_condition: {radius_earth}')
+    return (r - radius_earth)  # Trigger event when r = Earth's radius
 
 impact_condition.terminal = True  # Stop propagation at impact
 impact_condition.direction = -1  # Detect only when approaching the Earth's surface
@@ -233,14 +258,24 @@ def propagate_trajectory_with_drag(event_name, surface_area, mass, csv_input='st
         None: The function saves the propagated trajectory to a CSV file.
     """
     # Load the initial state vector from CSV
-    flight_time, state0 = load_state_vector_from_csv(event_name, csv_input)
-
+    state7 = load_state_vector_from_csv(event_name, csv_input)
+    state6 = state7[1]# then in two_body_eq the time is skipped
+    # Ensure state6 is a flat array
+    state6 = np.array(state6).flatten()
+    flight_time = state7[0] # first element is time
+    state7 = [flight_time] + list(state6)
     # Define the time span for propagation (start from event time)
     t_span = (flight_time, flight_time + 3600 * 24)  # Propagate for up to 24 hours
 
-    # Set up the propagation with drag
-    sol = solve_ivp(two_body_equations_with_drag, t_span, state0, 
-                    args=(mu_earth, surface_area,  mass),
+    # Wrapper function for two_body_equations_with_drag to add time back into state7
+    def two_body_equations_with_drag_wrapper(t, state6, mu, surface_area, mass):
+        # Rebuild state7 by adding the time component (t) back
+        state7 = [t] + list(state6)
+        return two_body_equations_with_drag(t, state7, mu, surface_area, mass)
+
+    # Set up the propagation with drag using state6 (6 elements) for solve_ivp
+    sol = solve_ivp(two_body_equations_with_drag_wrapper, t_span, state6, 
+                    args=(mu_earth, surface_area, mass),
                     events=impact_condition, rtol=1e-9, atol=1e-9)
 
     # Save the results to a new CSV file
