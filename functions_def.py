@@ -290,7 +290,7 @@ def get_stage_dry_mass(row_index, string_array, numeric_array):
     """
     # Specify the column name to find stage dry mass
     dry_mass = get_mass(row_index, string_array, numeric_array) - get_mass(row_index+1, string_array, numeric_array)
-    return dry_mass
+    return dry_mass # kg already
 
 def find_multiple_phase_transitions(column_name, string_array, numeric_array, tolerance=1e-2):
     """
