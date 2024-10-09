@@ -75,6 +75,7 @@ first_index, last_index, first_value, last_value = find_first_and_last_nonzero(c
 ignition_s2_time = get_time(first_index, string_array, numeric_array) # start of S2 thrust
 seco_time = get_time(last_index, string_array, numeric_array) # end of S2 thrust (second engine cut-off)
 s2_dry_mass = get_stage_dry_mass(last_index, string_array, numeric_array) # dry mass of S2 for impact area and trajectory computation
+print(f's2 dry mass index: {last_index}')
 print(f'Dry mass of s2 is: {s2_dry_mass} kg')
 # altitude
 ignition_s2_altitude = get_altitude(first_index, string_array, numeric_array) # start of S2 thrust
@@ -125,6 +126,9 @@ transition_indices, constant_values = find_multiple_phase_transitions(column_nam
 s1s2_separation_index = transition_indices[0] # separation of S1 and S2
 s2fairing_separation_index = transition_indices[1] # separation of fairing during S2 flight
 s2s3_separation_index = transition_indices[2] # separation of S2 and S3
+
+fairing_dry_mass = get_stage_dry_mass(s2fairing_separation_index-1, string_array, numeric_array) # fairing mass for impact area and trajectory computation. The +4 here is because this index doesnt include the 4 header rows, while the get_stage_dry_mass function does not
+print(f'Fairing mass is: {fairing_dry_mass} kg')
 
 s1s2_separation_value = constant_values[0] # BEFORE separation of S1 and S2
 s2fairing_separation_value = constant_values[1] # BEFORE separation of fairing during S2 flight, AFTER S1 separation
@@ -187,7 +191,7 @@ propagate_trajectory_with_drag(event_name, surface_area=7.18, mass=s2_dry_mass)
 
 # Example usage S2-fairing
 event_name = 's2fairing_separation'  # Define the event name you want to propagate from
-propagate_trajectory_with_drag(event_name, surface_area=17.2, mass = (( 1.04228914258135E+01 - 1.01628914258135E+01)*1e3)) 
+propagate_trajectory_with_drag(event_name, surface_area=17.2, mass =fairing_dry_mass) 
 # eg for fairing length L3 is 8m and diameter is 2.15m, mass is fairing dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
 
 # Full trajectory
