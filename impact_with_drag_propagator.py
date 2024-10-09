@@ -236,8 +236,12 @@ def impact_condition(t, state6, mu, surface_area, mass):
 
     state7 = [t] + list(state6) # reconstruct state7 needed to get latitude to get earth radius
     radius_earth = earth_radius_from_j2000(state7)
-    # print(f'earth radius from impact_condition: {radius_earth}')
-    return (r - radius_earth)  # Trigger event when r = Earth's radius
+    difference = r - radius_earth
+    print(f'Time: {t}, Radial Distance: {r}, Earth Radius: {radius_earth}, Difference: {difference}, x: {x}, y: {y}, z: {z}, vx: {vx}, vy: {vy}, vz: {vz}')
+    # Return a thresholded condition for triggering impact
+    if np.any(np.isnan(state6)) or np.any(np.isinf(state6)):
+        print("NaN or Inf detected in state6!")
+    return difference if difference > 0 else 0  # Event triggers when approaching Earth's surface
 
 impact_condition.terminal = True  # Stop propagation at impact
 impact_condition.direction = -1  # Detect only when approaching the Earth's surface
@@ -276,7 +280,7 @@ def propagate_trajectory_with_drag(event_name, surface_area, mass, csv_input='st
     # Set up the propagation with drag using state6 (6 elements) for solve_ivp
     sol = solve_ivp(two_body_equations_with_drag_wrapper, t_span, state6, 
                     args=(mu_earth, surface_area, mass),
-                    events=impact_condition, rtol=1e-9, atol=1e-9)
+                    events=impact_condition, method='RK45', rtol=1e-3, atol=1e-3)
 
     # Save the results to a new CSV file
     output_filename = csv_output.format(event_name)
@@ -299,7 +303,7 @@ def propagate_trajectory_with_drag(event_name, surface_area, mass, csv_input='st
 # propagate_trajectory_with_drag(event_name, surface_area=7.18, mass=((3.01735153404769E+00 -  1.08735152707548E+00)*1e3)) 
 # # eg for S2 length is 3.338m and diameter is 2.15m, mass is S2 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
 
-# # Example usage S2-fairing
-# event_name = 's2fairing_separation'  # Define the event name you want to propagate from
-# propagate_trajectory_with_drag(event_name, surface_area=17.2, mass = (( 1.04228914258135E+01 - 1.01628914258135E+01)*1e3)) 
-# # eg for fairing length L3 is 8m and diameter is 2.15m, mass is fairing dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
+# Example usage S2-fairing
+event_name = 's2fairing_separation'  # Define the event name you want to propagate from
+propagate_trajectory_with_drag(event_name, surface_area=17.2, mass = (( 1.04228914258135E+01 - 1.01628914258135E+01)*1e3)) 
+# eg for fairing length L3 is 8m and diameter is 2.15m, mass is fairing dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
