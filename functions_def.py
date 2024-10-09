@@ -1,5 +1,137 @@
 import pandas as pd
 import numpy as np
+import csv
+from astropy import units as u
+from astropy.coordinates import GCRS, ITRS, CartesianRepresentation, EarthLocation
+from astropy.time import Time
+from pyproj import Transformer # for wsg84
+from geopy.distance import geodesic
+import math
+
+def convert_seconds_to_iso(seconds):
+    """
+    Converts a time in seconds since the J2000 epoch to an ISO 8601 formatted string.
+
+    Args:
+        seconds (float): The time in seconds since the J2000 epoch.
+
+    Returns:
+        str: An ISO 8601 formatted time string corresponding to the input seconds.
+    """
+    # The epoch is set to some known reference time, e.g., J2000
+    j2000_epoch = Time("2000-01-01T00:00:00", scale='utc')  # J2000 epoch should be at 12, but it is wrong
+    return (j2000_epoch + seconds * u.s).iso
+
+def earth_radius_at_latitude(latitude_degrees):
+    """
+    Calculate the Earth's radius at a given latitude using the provided formula.
+    
+    Args:
+        latitude_degrees (float): Latitude in degrees.
+    
+    Returns:
+        float: Earth's radius at the specified latitude in kilometers.
+    """
+    # Convert latitude from degrees to radians
+    latitude_radians = math.radians(latitude_degrees)
+    
+    # Constants: Earth's equatorial and polar radii (in kmeters)
+    r1 = 6378137  # Equatorial radius in meters is 6378.137 km
+    r2 = 6356752  # Polar radius in meters is 6356.752 km
+    
+    # Calculate radius using the provided formula
+    numerator = (r1**2 * math.cos(latitude_radians))**2 + (r2**2 * math.sin(latitude_radians))**2
+    denominator = (r1 * math.cos(latitude_radians))**2 + (r2 * math.sin(latitude_radians))**2
+    radius = math.sqrt(numerator / denominator)
+
+    # # Use a point at the specified latitude and the equator (0,0) to calculate distance
+    # point_on_equator = (0, 0)
+    # point_at_latitude = (latitude_degrees, 0)
+
+    # # Calculate the distance from the equator to the point at the given latitude
+    # radius = geodesic(point_on_equator, point_at_latitude).kilometers
+    return radius/1000 # convert m to km
+
+# def earth_radius_with_geod(latitude_degrees):
+#     """
+#     Compute the Earth's radius at a given latitude using the WGS84 ellipsoid model via the geographiclib library.
+
+#     Args:
+#         lat (float): Geodetic latitude in degrees.
+
+#     Returns:
+#         float: Earth radius at the given latitude in kilometers.
+#     """
+#     geod = Geodesic.WGS84
+#     radius = geod.EquatorialRadius * (1 - geod.Flattening * (1 - geod.Flattening * (np.sin(np.radians(latitude_degrees))**2)))
+    
+#     return radius
+
+def convert_j2000_to_geographic(x, y, z, event_time):
+    """
+    Converts Cartesian coordinates in the J2000 reference frame (ECI) to geographic coordinates (ECEF) (latitude, longitude, altitude).
+
+    Args:
+        x (float): The x-coordinate in kilometers.
+        y (float): The y-coordinate in kilometers.
+        z (float): The z-coordinate in kilometers.
+        event_time (float): The event time in seconds since the J2000 epoch.
+
+    Returns:
+        tuple: A tuple containing:
+            - lat (float): Latitude in degrees.
+            - lon (float): Longitude in degrees.
+            - alt (float): Altitude in **meters**.
+    """
+    iso_time = convert_seconds_to_iso(event_time)
+    cartesian = CartesianRepresentation(x * u.km, y * u.km, z * u.km)
+
+    # GCRS coordinate (Geocentric Celestial Reference System)
+    gcrs = GCRS(cartesian, obstime=Time(iso_time))
+
+    # Convert it to an Earth-fixed frame: ITRS (International Terrestrial Reference System)
+    itrs = gcrs.transform_to(ITRS(obstime=Time(iso_time)))
+
+    el = EarthLocation.from_geocentric(itrs.x, itrs.y, itrs.z)
+
+    # conversion to geodetic
+    lon, lat, alt = el.to_geodetic()
+
+    # Convert units for return
+    lat_deg = lat.to(u.deg).value  # Latitude in degrees
+    lon_deg = lon.to(u.deg).value  # Longitude in degrees
+    alt_m = alt.to(u.m).value  # Altitude in meters
+
+    return lat_deg, lon_deg, alt_m
+
+def convert_j2000_to_wgs84(x, y, z, event_time):
+    """
+    Converts Cartesian coordinates in the J2000 reference frame to WGS84 geographic coordinates (latitude, longitude, altitude).
+
+    Args:
+        x (float): The x-coordinate in kilometers (in J2000 frame).
+        y (float): The y-coordinate in kilometers (in J2000 frame).
+        z (float): The z-coordinate in kilometers (in J2000 frame).
+        event_time (float): The event time in seconds since the J2000 epoch.
+
+    Returns:
+        tuple: A tuple containing:
+            - lat (float): Latitude in degrees.
+            - lon (float): Longitude in degrees.
+            - alt (float): Altitude in meters.
+    """
+    # Convert Cartesian coordinates from km to meters for ECEF transformation
+    x_meters = x * 1000  # Convert kilometers to meters
+    y_meters = y * 1000  # Convert kilometers to meters
+    z_meters = z * 1000  # Convert kilometers to meters
+
+    # Define transformer from ECEF (Earth-Centered, Earth-Fixed) to WGS84 geographic coordinates
+    transformer = Transformer.from_crs("EPSG:4978", "EPSG:4326")  # ECEF to WGS84
+
+    # Transform ECEF coordinates (X, Y, Z) to WGS84 (lat, lon, alt)
+    lat, lon, alt = transformer.transform(x_meters, y_meters, z_meters)
+
+    return lat, lon, alt
 
 def load_excel_as_two_arrays(file_path):
     """
