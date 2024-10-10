@@ -19,7 +19,8 @@ def convert_seconds_to_iso(seconds):
         str: An ISO 8601 formatted time string corresponding to the input seconds.
     """
     # The epoch is set to some known reference time, e.g., J2000
-    j2000_epoch = Time("2000-01-01T00:00:00", scale='utc')  # J2000 epoch should be at 12, but it is wrong
+    j2000_epoch = Time("2000-01-01T12:00:00", scale='utc')  # J2000 epoch should be at 12, but it is wrong
+    print(f'epoch: {(j2000_epoch + seconds * u.s).iso}') # for debugging
     return (j2000_epoch + seconds * u.s).iso
 
 def earth_radius_at_latitude(latitude_degrees):
