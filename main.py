@@ -25,19 +25,18 @@ that will be used for different application, consider this small feature and do 
 thinking it will be the same info all the time.
 """
 
-from functions_def import load_excel_as_two_arrays
+from functions_def import *
+from impact_with_drag_propagator import propagate_trajectory_with_drag # propagate stage trajectories into csv
+from existing_trajectory_loader import trajectory_from_excel_to_csv # export existing trajectory csv
+from j2000_to_kml import propagate_and_convert # export kml from csv
+import os # for file pathing
 
 file_path = '/home/fabiomeloni/flight_safety/traiettoria.xlsx'
-
+astos_name = 'traiettoria'
 # Load the Excel file as two separate arrays
 string_array, numeric_array = load_excel_as_two_arrays(file_path)
 
 # Ignition S1 engine based on thrust of engine 1, and main engine cut-off (MECO)
-from functions_def import *
-from impact_with_drag_propagator import propagate_trajectory_with_drag
-from existing_trajectory_loader import trajectory_from_excel_to_csv
-from j2000_to_kml import propagate_and_convert
-
 column_name = "thrust~Engine_1_Up:Rocket"
 # Find the first and last non-zero values in the numeric column
 first_index, last_index, first_value, last_value = find_first_and_last_nonzero(column_name, string_array, numeric_array)
@@ -54,7 +53,13 @@ meco_altitude = get_altitude(last_index, string_array, numeric_array) # end of S
 
 # state vector
 # Specify the path to save the CSV
-output_csv_path = "state_vectors.csv"
+# Create folder name based on astos excel name
+output_folder = f"csv_files_{astos_name}"
+# Create the folder if it doesn't exist
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
+# Define the CSV output path inside the created folder
+output_csv_path = os.path.join(output_folder, "state_vectors.csv")  # CSV file within the new folder
 reset_state_vectors()
 ignition_s1_state = get_state_vector(first_index, string_array, numeric_array, "ignition_s1") # start of S1 thrust
 meco_state = get_state_vector(last_index, string_array, numeric_array, "meco") # end of S1 thrust (main engine cut-off)
@@ -113,10 +118,8 @@ save_state_vectors_to_csv(output_csv_path)
 print(f"S3 ignition index: {first_index + 5},     timestamp: {ignition_s3_time} s,    altitude: {ignition_s3_altitude} km,   state vector: {ignition_s3_state} km-km/s")
 print(f"TECO index: {last_index + 5},           timestamp: {teco_time} s,    altitude: {teco_altitude},      state vector: {teco_state} km-km/s")
 
+
 # Stage Separation S1/S2, Fairing Separation during S2, and Separation S2/S3
-
-from functions_def import find_multiple_phase_transitions
-
 # Specify the column name you are looking for
 column_name = "dimension_x~Rocket" # looking at the length of the launcher to see when the separation happens (and the length decreases)
 
@@ -158,8 +161,6 @@ print(f"Fairing separation (during S2) index: {s2fairing_separation_index + 5}, 
 print(f"S2/S3 separation index: {s2s3_separation_index + 5},                  timestamp: {s2s3_separation_time} s,    altitude: {s2s3_separation_altitude} km, Previous S2 rocket length without fairing: {s2s3_separation_value} m,  New S3 rocket length: {s3_final_value} m,     state vector: {s2s3_separation_state} km-km/s")
 
 ### Maximum Dynamic Pressure (Q) Event
-from functions_def import find_max
-
 column_name = "dynamic_pressure~Rocket"
 max_index, max_value = find_max(column_name, string_array, numeric_array)
 
@@ -181,25 +182,24 @@ print(f"total final mass: {final_masses[0]*1e3} kg, final propellant mass: {fina
 #### Propagating state vectors for separation trajectories, and loading full trajectory of rocket to csv
 # Example usage S1-S2
 event_name = 's1s2_separation'  # Define the event name you want to propagate from
-propagate_trajectory_with_drag(event_name, surface_area=28.1175, mass=s1_dry_mass) 
+propagate_trajectory_with_drag(event_name, surface_area=28.1175, mass=s1_dry_mass, trajectory_astos_name=astos_name) 
 # eg for S1 length is 8.15 and diameter is 3.45m, Cd is ~1 for Reynolds <2*10^5 Then it falls to 0.2-0.3. For flow speed=0.8km/s the Re=7*10^6, which would be Re=0.3 S1 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
 
 # Example usage S2-S3
 event_name = 's2s3_separation'  # Define the event name you want to propagate from
-propagate_trajectory_with_drag(event_name, surface_area=7.18, mass=s2_dry_mass) 
+propagate_trajectory_with_drag(event_name, surface_area=7.18, mass=s2_dry_mass, trajectory_astos_name=astos_name) 
 # eg for S2 length is 3.338m and diameter is 2.15m, mass is S2 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
 
 # Example usage S2-fairing
 event_name = 's2fairing_separation'  # Define the event name you want to propagate from
-propagate_trajectory_with_drag(event_name, surface_area=17.2, mass =fairing_dry_mass) 
+propagate_trajectory_with_drag(event_name, surface_area=17.2, mass =fairing_dry_mass, trajectory_astos_name=astos_name) 
 # eg for fairing length L3 is 8m and diameter is 2.15m, mass is fairing dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
 
 # Full trajectory
-excel_file_path = '/home/fabiomeloni/flight_safety/traiettoria.xlsx'  # Change to your actual Excel file path
 output_csv_path = "state_vector_full_trajectory.csv"  # Change to your desired CSV output path
 event_name = 'full_trajectory'  # Set the event name you want to associate with this trajectory
 # Convert Excel to CSV
-trajectory_from_excel_to_csv(excel_file_path, output_csv_path, event_name)
+trajectory_from_excel_to_csv(excel_file_path=file_path, event_name=event_name, trajectory_astos_name=astos_name)
 
 #### Exporting KML for trajectories
 event_names = ['drag_s1s2_separation', 'drag_s2fairing_separation', 'drag_s2s3_separation', 'full_trajectory']
@@ -211,4 +211,4 @@ for event_name in event_names:
         csv_filename = f"propagated_state_vector_{event_name}.csv"  # Make sure this file exists
     csv_filenames.append(csv_filename)
 for event_name, csv_filename in zip(event_names, csv_filenames):
-    propagate_and_convert(csv_filename, event_name)
+    propagate_and_convert(csv_filename, event_name, trajectory_astos_name=astos_name)

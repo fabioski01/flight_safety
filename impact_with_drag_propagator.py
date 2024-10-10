@@ -29,19 +29,20 @@ import csv
 from scipy.integrate import solve_ivp
 from pyatmos import coesa76
 from scipy.interpolate import interp1d
-from functions_def import convert_j2000_to_wgs84, earth_radius_at_latitude, convert_j2000_to_geographic
+from functions_def import earth_radius_at_latitude, convert_j2000_to_geographic
+import os # for path finding
 
 # Define constants
 mu_earth = 398600.4418  # Earth's gravitational parameter, km^3/s^2
 
 # Function to read the state vector from the CSV file based on event name
-def load_state_vector_from_csv(event_name, csv_filename='state_vectors.csv'):
+def load_state_vector_from_csv(event_name, trajectory_astos_name):
     """
     Loads the state vector (position and velocity) for a specified event from a CSV file.
 
     Args:
         event_name (str): The name of the event for which the state vector is being loaded.
-        csv_filename (str, optional): The path to the CSV file containing state vectors. Defaults to 'state_vectors.csv'.
+        trajectory_astos_name(str): The path to the CSV file containing state vectors. Defaults to 'state_vectors.csv'.
 
     Returns:
         tuple: A tuple containing:
@@ -60,7 +61,8 @@ def load_state_vector_from_csv(event_name, csv_filename='state_vectors.csv'):
     
     # If the event name is in the map, replace it with the standard name
     event_name = event_name_map.get(event_name, event_name)
-    
+    csv_filename = 'state_vectors.csv'
+    csv_filename = os.path.join(f'csv_files_{trajectory_astos_name}', csv_filename)  # kind of a hotfix to not change the entire structure
     # Open and read the CSV file
     with open(csv_filename, 'r') as file:
         reader = csv.reader(file)
@@ -247,14 +249,14 @@ def impact_condition(t, state6, mu, surface_area, mass):
     difference = r - radius_earth
     # print(f'Time: {t}, Radial Distance: {r}, Earth Radius: {radius_earth}, Difference: {difference}, x: {x}, y: {y}, z: {z}, vx: {vx}, vy: {vy}, vz: {vz}') # for debugging
     # Return a thresholded condition for triggering impact
-    if np.any(np.isnan(state6)) or np.any(np.isinf(state6)):
-        print("NaN or Inf detected in state6!")
+    # if np.any(np.isnan(state6)) or np.any(np.isinf(state6)):
+    #     print("NaN or Inf detected in state6!")
     return difference if difference > 0 else 0  # Event triggers when approaching Earth's surface
 
 impact_condition.terminal = True  # Stop propagation at impact
 impact_condition.direction = -1  # Detect only when approaching the Earth's surface
 
-def propagate_trajectory_with_drag(event_name, surface_area, mass, csv_input='state_vectors.csv', csv_output='propagated_state_vector_drag_{}.csv'):
+def propagate_trajectory_with_drag(event_name, surface_area, mass, trajectory_astos_name):
     """
     Propagates the trajectory of the spacecraft considering atmospheric drag and saves the result to a CSV file.
 
@@ -262,15 +264,21 @@ def propagate_trajectory_with_drag(event_name, surface_area, mass, csv_input='st
         event_name (str): The name of the event for which the state vector is being propagated (e.g., 's1s2_separation').
         surface_area (float): The surface area of the spacecraft in square meters.
         mass (float): The mass of the spacecraft in kilograms.
-        csv_input (str): The name of the input CSV file containing the initial state vector. Default is 'state_vectors.csv'.
-        csv_output (str): The format string for the output CSV file where results will be saved.
-                          The event name is used to format the file name. Default is 'propagated_state_vector_drag_{}.csv'.
-
+        trajectory_astos_name (str): Name to be used for the folder where the CSV file is saved.
+        csv_input (str): The name of the input CSV file containing the initial state vector. Default is csv_files/'state_vectors.csv'.
+    
     Returns:
         None: The function saves the propagated trajectory to a CSV file.
     """
+    # CSV file folder should already exist from state vectors of events. Output and input folder should coincide
+    folder_name = f"csv_files_{trajectory_astos_name}"
+    # os.makedirs(folder_name, exist_ok=True)
+    
+    # Define the output file path within the folder
+    output_filename = os.path.join(folder_name, f"propagated_state_vector_drag_{event_name}.csv")
+    csv_input = os.path.join(folder_name, 'state_vectors.csv')  # This is to make a FILE to be opened (NOT a directory)
     # Load the initial state vector from CSV
-    state7 = load_state_vector_from_csv(event_name, csv_input)
+    state7 = load_state_vector_from_csv(event_name, trajectory_astos_name)
     state6 = state7[1]# then in two_body_eq the time is skipped
     # Ensure state6 is a flat array
     state6 = np.array(state6).flatten()
@@ -288,10 +296,9 @@ def propagate_trajectory_with_drag(event_name, surface_area, mass, csv_input='st
     # Set up the propagation with drag using state6 (6 elements) for solve_ivp
     sol = solve_ivp(two_body_equations_with_drag_wrapper, t_span, state6, 
                     args=(mu_earth, surface_area, mass),
-                    events=impact_condition, method='RK45', rtol=1e-16, atol=1e-16)
+                    events=impact_condition, method='RK45', rtol=1e-7, atol=1e-7)
 
     # Save the results to a new CSV file
-    output_filename = csv_output.format(event_name)
     with open(output_filename, 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['Time (s)', 'X (km)', 'Y (km)', 'Z (km)', 'Vx (km/s)', 'Vy (km/s)', 'Vz (km/s)'])

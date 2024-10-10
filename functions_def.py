@@ -20,7 +20,7 @@ def convert_seconds_to_iso(seconds):
     """
     # The epoch is set to some known reference time, e.g., J2000
     j2000_epoch = Time("2000-01-01T12:00:00", scale='utc')  # J2000 epoch should be at 12, but it is wrong
-    print(f'epoch: {(j2000_epoch + seconds * u.s).iso}') # for debugging
+    # print(f'epoch: {(j2000_epoch + seconds * u.s).iso}') # for debugging
     return (j2000_epoch + seconds * u.s).iso
 
 def earth_radius_at_latitude(latitude_degrees):
@@ -105,34 +105,34 @@ def convert_j2000_to_geographic(x, y, z, event_time):
 
     return lat_deg, lon_deg, alt_m
 
-def convert_j2000_to_wgs84(x, y, z, event_time):
-    """
-    Converts Cartesian coordinates in the J2000 reference frame to WGS84 geographic coordinates (latitude, longitude, altitude).
+# def convert_j2000_to_wgs84(x, y, z, event_time):
+#     """
+#     Converts Cartesian coordinates in the J2000 reference frame to WGS84 geographic coordinates (latitude, longitude, altitude).
 
-    Args:
-        x (float): The x-coordinate in kilometers (in J2000 frame).
-        y (float): The y-coordinate in kilometers (in J2000 frame).
-        z (float): The z-coordinate in kilometers (in J2000 frame).
-        event_time (float): The event time in seconds since the J2000 epoch.
+#     Args:
+#         x (float): The x-coordinate in kilometers (in J2000 frame).
+#         y (float): The y-coordinate in kilometers (in J2000 frame).
+#         z (float): The z-coordinate in kilometers (in J2000 frame).
+#         event_time (float): The event time in seconds since the J2000 epoch.
 
-    Returns:
-        tuple: A tuple containing:
-            - lat (float): Latitude in degrees.
-            - lon (float): Longitude in degrees.
-            - alt (float): Altitude in meters.
-    """
-    # Convert Cartesian coordinates from km to meters for ECEF transformation
-    x_meters = x * 1000  # Convert kilometers to meters
-    y_meters = y * 1000  # Convert kilometers to meters
-    z_meters = z * 1000  # Convert kilometers to meters
+#     Returns:
+#         tuple: A tuple containing:
+#             - lat (float): Latitude in degrees.
+#             - lon (float): Longitude in degrees.
+#             - alt (float): Altitude in meters.
+#     """
+#     # Convert Cartesian coordinates from km to meters for ECEF transformation
+#     x_meters = x * 1000  # Convert kilometers to meters
+#     y_meters = y * 1000  # Convert kilometers to meters
+#     z_meters = z * 1000  # Convert kilometers to meters
 
-    # Define transformer from ECEF (Earth-Centered, Earth-Fixed) to WGS84 geographic coordinates
-    transformer = Transformer.from_crs("EPSG:4978", "EPSG:4326")  # ECEF to WGS84
+#     # Define transformer from ECEF (Earth-Centered, Earth-Fixed) to WGS84 geographic coordinates
+#     transformer = Transformer.from_crs("EPSG:4978", "EPSG:4326")  # ECEF to WGS84
 
-    # Transform ECEF coordinates (X, Y, Z) to WGS84 (lat, lon, alt)
-    lat, lon, alt = transformer.transform(x_meters, y_meters, z_meters)
+#     # Transform ECEF coordinates (X, Y, Z) to WGS84 (lat, lon, alt)
+#     lat, lon, alt = transformer.transform(x_meters, y_meters, z_meters)
 
-    return lat, lon, alt
+#     return lat, lon, alt
 
 def load_excel_as_two_arrays(file_path):
     """
