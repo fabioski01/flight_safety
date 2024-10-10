@@ -206,7 +206,7 @@ def propagate_and_convert(csv_filename, event_name):
             # lon += (-0.7741666666666667 - 358.49315222750636) # difference real wrt computed
             # lon += (-0.7741666666666667 - 98.4657879425389) # difference real wrt computed
             # lat += (60.83901472093895 - 60.67360084382402) # difference real wrt computed
-
+            # -1.5068477407153864,60.83764877405799
             latitudes.append(lat)
             longitudes.append(lon)
             altitudes.append(alt)

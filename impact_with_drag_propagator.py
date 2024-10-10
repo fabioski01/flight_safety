@@ -167,19 +167,27 @@ def drag_acceleration(state7, surface_area, mass):
         kinematic_viscosity = 1.48e-5 # kinematic viscosity of air at 15 deg Celsius in m2/s
         reynolds = v*characteristic_dimension/kinematic_viscosity # -
         drag_coefficient = get_drag_coefficient(reynolds) # -
-        # Drag force
-        F_drag_x = 0.5 * rho * (vx*1e3)**2 * drag_coefficient * surface_area # N
-        F_drag_y = 0.5 * rho * (vy*1e3)**2 * drag_coefficient * surface_area # N
-        F_drag_z = 0.5 * rho * (vy*1e3)**2 * drag_coefficient * surface_area # N
+        # # Drag force
 
-        # Acceleration due to drag (deceleration is opposite to velocity vector)
+        # F_drag_x = 0.5 * rho * (vx)**2 * drag_coefficient * surface_area # N
+        # F_drag_y = 0.5 * rho * (vy)**2 * drag_coefficient * surface_area # N
+        # F_drag_z = 0.5 * rho * (vy)**2 * drag_coefficient * surface_area # N
+        F_drag = 0.5 * rho * (v)**2 * drag_coefficient * surface_area # N
+        # # Acceleration due to drag (deceleration is opposite to velocity vector)
         # a_drag = -F_drag / mass * velocity / v
-        a_drag_x = float(-F_drag_x / mass)*1e-3 # N/kg = m/s2 to convert to km/s2
-        a_drag_y = float(-F_drag_y / mass)*1e-3 # N/kg = m/s2 to convert to km/s2
-        a_drag_z = float(-F_drag_z / mass)*1e-3 # N/kg = m/s2 to convert to km/s2
+        # Drag accelerations in x, y, z directions
+        # a_drag_x = float(-F_drag_x / mass)*1e-3 # N/kg = m/s2 to convert to km/s2
+        # a_drag_y = float(-F_drag_y / mass)*1e-3 # N/kg = m/s2 to convert to km/s2
+        # a_drag_z = float(-F_drag_z / mass)*1e-3 # N/kg = m/s2 to convert to km/s2
+        a_drag_x = float(F_drag / mass)*(vx*1000/v)*1e-3 # N/kg = m/s2 to convert to km/s2
+        a_drag_y = float(F_drag / mass)*(vy*1000/v)*1e-3 # N/kg = m/s2 to convert to km/s2
+        a_drag_z = float(F_drag / mass)*(vz*1000/v)*1e-3 # N/kg = m/s2 to convert to km/s2
         a_drag = [a_drag_x, a_drag_y, a_drag_z] # in km/s2
     else:
         a_drag = np.array([0.0, 0.0, 0.0])  # No drag if not moving
+    # print(f'acc drag x: {a_drag_x}') # for debugging
+    # print(f'drag acc: {a_drag}') # for debugging
+    # print(f'drag force: {F_drag}') # for debugging
     return a_drag
 
 def two_body_equations_with_drag(t, state7, mu, surface_area, mass):
@@ -237,7 +245,7 @@ def impact_condition(t, state6, mu, surface_area, mass):
     state7 = [t] + list(state6) # reconstruct state7 needed to get latitude to get earth radius
     radius_earth = earth_radius_from_j2000(state7)
     difference = r - radius_earth
-    print(f'Time: {t}, Radial Distance: {r}, Earth Radius: {radius_earth}, Difference: {difference}, x: {x}, y: {y}, z: {z}, vx: {vx}, vy: {vy}, vz: {vz}')
+    # print(f'Time: {t}, Radial Distance: {r}, Earth Radius: {radius_earth}, Difference: {difference}, x: {x}, y: {y}, z: {z}, vx: {vx}, vy: {vy}, vz: {vz}') # for debugging
     # Return a thresholded condition for triggering impact
     if np.any(np.isnan(state6)) or np.any(np.isinf(state6)):
         print("NaN or Inf detected in state6!")
@@ -280,7 +288,7 @@ def propagate_trajectory_with_drag(event_name, surface_area, mass, csv_input='st
     # Set up the propagation with drag using state6 (6 elements) for solve_ivp
     sol = solve_ivp(two_body_equations_with_drag_wrapper, t_span, state6, 
                     args=(mu_earth, surface_area, mass),
-                    events=impact_condition, method='RK45', rtol=1e-3, atol=1e-3)
+                    events=impact_condition, method='RK45', rtol=1e-16, atol=1e-16)
 
     # Save the results to a new CSV file
     output_filename = csv_output.format(event_name)
@@ -303,7 +311,7 @@ def propagate_trajectory_with_drag(event_name, surface_area, mass, csv_input='st
 # propagate_trajectory_with_drag(event_name, surface_area=7.18, mass=((3.01735153404769E+00 -  1.08735152707548E+00)*1e3)) 
 # # eg for S2 length is 3.338m and diameter is 2.15m, mass is S2 dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
 
-# Example usage S2-fairing
-event_name = 's2fairing_separation'  # Define the event name you want to propagate from
-propagate_trajectory_with_drag(event_name, surface_area=17.2, mass = (( 1.04228914258135E+01 - 1.01628914258135E+01)*1e3)) 
-# eg for fairing length L3 is 8m and diameter is 2.15m, mass is fairing dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
+# # Example usage S2-fairing
+# event_name = 's2fairing_separation'  # Define the event name you want to propagate from
+# propagate_trajectory_with_drag(event_name, surface_area=17.2, mass = (( 1.04228914258135E+01 - 1.01628914258135E+01)*1e3)) 
+# # eg for fairing length L3 is 8m and diameter is 2.15m, mass is fairing dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
