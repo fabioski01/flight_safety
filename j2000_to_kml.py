@@ -17,7 +17,7 @@ Functions defined within the script include:
 - `convert_j2000_to_geographic`: Transforms J2000 Cartesian coordinates into geographic coordinates.
 - `convert_seconds_to_iso`: Converts time from seconds since the J2000 epoch to ISO 8601 format.
 - `save_kml_output`: Generates and saves KML output for trajectory visualization.
-- `propagate_and_convert`: Reads state vectors from a CSV file, processes them, and invokes KML output generation.
+- `read_and_convert`: Reads state vectors from a CSV file, processes them, and invokes KML output generation.
 
 The script is intended for use in launch vehicle simulations, particularly to visualize trajectories and
 impact points and areas of spent rocket stages and other components.
@@ -173,7 +173,7 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name, trajectory_ast
 
     print(f'KML file of {event_name} exported to {output_file}')
 
-def propagate_and_convert(csv_filename, event_name, trajectory_astos_name):
+def read_and_convert(csv_filename, event_name, trajectory_astos_name):
     """
     Propagates the trajectory from a CSV file containing state vectors, converts the coordinates
     from J2000 to geographic coordinates, and saves the results in a KML format.
@@ -230,4 +230,4 @@ def propagate_and_convert(csv_filename, event_name, trajectory_astos_name):
 #         csv_filename = f"propagated_state_vector_{event_name}.csv"  # Make sure this file exists
 #     csv_filenames.append(csv_filename)
 # for event_name, csv_filename in zip(event_names, csv_filenames):
-#     propagate_and_convert(csv_filename, event_name, trajectory_astos_name)
+#     read_and_convert(csv_filename, event_name, trajectory_astos_name)
