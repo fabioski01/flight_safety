@@ -31,12 +31,11 @@ This script is intended for launch vehicle simulations, particularly for assessi
 with spent rocket stages and other descending objects.
 """
 
-
-from impact_with_drag_propagator import get_drag_coefficient, atmospheric_density, load_state_vector_from_csv
+from impact_with_drag_propagator import get_drag_coefficient, atmospheric_density, load_state_vector_from_csv, earth_radius_from_j2000
 import numpy as np
 from scipy.interpolate import interp1d
 
-radius_earth = 6371.0 # km (average, to be enhanced)
+# radius_earth = 6371.0 # km (average, to be enhanced)
 
 # Sample empirical Cd vs Re data for a sphere (from tabulated references)
 altitudes =   np.array([0, 5,  10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 90, 100, 120])
@@ -69,7 +68,9 @@ def get_impact_radius(event_name, trajectory_astos_name):
         float: The computed impact radius in meters.
     """
     # Load the initial state vector from CSV
-    flight_time, state = load_state_vector_from_csv(event_name, trajectory_astos_name)
+    flight_time, state6 = load_state_vector_from_csv(event_name, trajectory_astos_name)
+    state7 = [flight_time] + list(state6) # reconstruct state7 needed to get latitude to get earth radius
+    radius_earth = earth_radius_from_j2000(state7)
 
     if event_name == 's1s2_separation' or 'drag_s1s1_separation':
         surface_area = 28.1175 # m2
@@ -83,7 +84,7 @@ def get_impact_radius(event_name, trajectory_astos_name):
     else:
         raise ValueError(f"Event name '{event_name}' not recognized. Try with s1s2_separation or s2s3_separation or s2fairing_separation. Or try putting drag_ in front of them")
 
-    x, y, z, vx, vy, vz = state # km and km/s
+    x, y, z, vx, vy, vz = state6 # km and km/s
     r = np.sqrt(x**2 + y**2 + z**2) # km
     altitude = r - radius_earth # this makes sense
     # Initialize variables
