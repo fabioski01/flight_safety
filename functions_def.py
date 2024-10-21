@@ -440,6 +440,34 @@ def save_state_vectors_to_csv(output_csv_path):
 
     print(f"All state vectors saved to {output_csv_path}")
 
+def calculate_visibility_radius(altitude, r_earth=6371, max_visibility_radius=700, max_visibility_altitude=150):
+    """
+    Calculates the visibility radius based on the given altitude. Has constraints of maximum visibility radius and altitude.
+    Might need enhancing in the future.
+
+    Args:
+        altitude (float): Altitude in km.
+        r_earth (float): Earth's radius in km (default is 6371km).
+        max_visibility_radius (float): Maximum visibility radius, generally difficult to estimate, dependent on multiple arguments which are not taken into account (atmospheric scattering, lightning conditions, object size and brightness, weather conditions...). Default set to 700km.
+        max_visibility_altitude (float): Maximum altitude for which an object can be seen from ground level. Generally difficult to estimate, dependent on multiple arguments which are not taken into account (atmospheric scattering, lightning conditions, object size and brightness, weather conditions...). Default set to 150km.
+
+    Returns:
+        float: Visibility radius in meters.
+    """
+    # set radius to 0 if the altitude is above the visible altitude
+    if altitude > max_visibility_altitude:
+        visibility_radius = 0
+    else:
+        # uses formula for distance to the horizon, might need fixing (https://aty.sdsu.edu/explain/atmos_refr/horizon.html)
+        visibility_radius = math.sqrt(r_earth * altitude * 2)
+    
+    # set radius to the max allowed in case it would have been larger
+    if visibility_radius > max_visibility_radius:
+        visibility_radius = max_visibility_radius
+
+    return visibility_radius
+
+
 # # example of usage
 # if __name__ == "__main__":
 #     file_path = '/home/fabiomeloni/flight_safety/traiettoria.xlsx'
