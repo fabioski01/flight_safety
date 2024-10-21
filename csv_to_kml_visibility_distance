@@ -24,15 +24,10 @@ impact points and areas of spent rocket stages and other components.
 """
 
 import csv
-from astropy import units as u
-from astropy.coordinates import GCRS, ITRS, CartesianRepresentation, EarthLocation
-from astropy.time import Time
 from lxml import etree
 from pykml.factory import KML_ElementMaker as KML # libraries for KML exports
 # import simplekml # import KML  # to match KML style of other flight safety exports
-import math # for impact radius
-from perturbations import get_impact_radius
-from pyproj import Transformer # for wsg84
+import math # for radius
 from functions_def import convert_j2000_to_geographic, calculate_visibility_radius
 from pathlib import Path
 import os # for file path finding
