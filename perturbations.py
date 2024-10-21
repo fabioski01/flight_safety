@@ -57,20 +57,19 @@ def wind_speed_profile(altitude):
         return wind_interp(altitude)
 
 
-def get_impact_radius(event_name):
+def get_impact_radius(event_name, trajectory_astos_name):
     """
     Computes the impact radius due to wind effects using a numerical integration method.
     
     Args:
-        state
-        surface_area (float): The surface area of the object in m^2.
-        mass (float): The mass of the object in kg.
+        event_name (str): The name of the event for which the state vector is being loaded.
+        trajectory_astos_name(str): The path to the CSV file containing state vectors. Defaults to 'state_vectors.csv'.
 
     Returns:
         float: The computed impact radius in meters.
     """
     # Load the initial state vector from CSV
-    flight_time, state = load_state_vector_from_csv(event_name)
+    flight_time, state = load_state_vector_from_csv(event_name, trajectory_astos_name)
 
     if event_name == 's1s2_separation' or 'drag_s1s1_separation':
         surface_area = 28.1175 # m2

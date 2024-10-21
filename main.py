@@ -192,7 +192,7 @@ propagate_trajectory_with_drag(event_name, surface_area=7.18, mass=s2_dry_mass, 
 
 # Example usage S2-fairing
 event_name = 's2fairing_separation'  # Define the event name you want to propagate from
-propagate_trajectory_with_drag(event_name, surface_area=17.2, mass =fairing_dry_mass, trajectory_astos_name=astos_name) 
+propagate_trajectory_with_drag(event_name, surface_area=17.2, mass=fairing_dry_mass, trajectory_astos_name=astos_name) 
 # eg for fairing length L3 is 8m and diameter is 2.15m, mass is fairing dry mass which is improvisely subtracted from total rocket mass (Mg to Kg)
 
 # Full trajectory
