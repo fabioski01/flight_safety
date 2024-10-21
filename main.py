@@ -28,7 +28,7 @@ thinking it will be the same info all the time.
 from functions_def import *
 from impact_with_drag_propagator import propagate_trajectory_with_drag # propagate stage trajectories into csv
 from existing_trajectory_loader import trajectory_from_excel_to_csv # export existing trajectory csv
-from j2000_to_kml import read_and_convert # export kml from csv
+from csv_to_kml import read_and_convert # export kml from csv
 import os # for file pathing
 
 file_path = '/home/fabiomeloni/flight_safety/traiettoria.xlsx'
