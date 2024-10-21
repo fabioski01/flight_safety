@@ -217,8 +217,7 @@ def read_and_convert(csv_filename, event_name, trajectory_astos_name):
             altitudes.append(alt)
 
     save_kml_output(latitudes, longitudes, altitudes, event_name, trajectory_astos_name)
-    print(f'KML file of {event_name} exported')
-
+    
 # # Example usage
 # #### Exporting KML for trajectories
 # event_names = ['drag_s1s2_separation', 'drag_s2fairing_separation', 'drag_s2s3_separation', 'full_trajectory']
