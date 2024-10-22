@@ -102,7 +102,8 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name, trajectory_ast
 
     # Add visibility circles at the specified interval
     for i in range(len(times)):
-        if times[i] % time_interval == 0:  # Check if time matches the interval
+        if abs(times[i] % time_interval) < 1e+0:  # Allow a small tolerance, and check if time matches the interval
+            print(f"Plotting visibility circle at t={times[i]}")  # Debugging
             altitude = altitudes_relative_to_ground[i]
             visibility_radius = calculate_visibility_radius(altitude)  # Get the visibility radius
 
@@ -167,6 +168,9 @@ def read_and_convert(csv_filename, event_name, trajectory_astos_name, time_inter
         header = next(csv_reader)  # Skip the header
 
         for row in csv_reader:
+            # if len(times) > 15:  # Limit to first 10 rows for testing
+            #     print('porcodio')
+            #     break
             time = float(row[0])  # Time in seconds
             x = float(row[1])      # X position in km
             y = float(row[2])      # Y position in km
@@ -189,6 +193,5 @@ def read_and_convert(csv_filename, event_name, trajectory_astos_name, time_inter
     print(f'KML file of {event_name} exported')
 
 
-    
 # Example usage with a different time interval (e.g., 60 seconds)
-read_and_convert("state_vector_full_trajectory.csv", "full_trajectory", "my_trajectory", time_interval=60)
+read_and_convert("state_vector_full_trajectory.csv", "full_trajectory", "traiettoria", time_interval=60)
