@@ -33,7 +33,7 @@ from functions_def import earth_radius_at_latitude, convert_j2000_to_geographic
 import os # for path finding
 
 # Define constants
-mu_earth = 398600.4418  # Earth's gravitational parameter, km^3/s^2
+# mu_earth = 398600.4418  # Earth's gravitational parameter, km^3/s^2
 
 # Function to read the state vector from the CSV file based on event name
 def load_state_vector_from_csv(event_name, trajectory_astos_name):
@@ -174,7 +174,7 @@ def drag_acceleration(state7, surface_area, mass):
         # F_drag_x = 0.5 * rho * (vx)**2 * drag_coefficient * surface_area # N
         # F_drag_y = 0.5 * rho * (vy)**2 * drag_coefficient * surface_area # N
         # F_drag_z = 0.5 * rho * (vy)**2 * drag_coefficient * surface_area # N
-        F_drag = 0.5 * rho * (v)**2 * drag_coefficient * surface_area # N
+        F_drag = - 0.5 * rho * (v)**2 * drag_coefficient * surface_area # N
         # # Acceleration due to drag (deceleration is opposite to velocity vector)
         # a_drag = -F_drag / mass * velocity / v
         # Drag accelerations in x, y, z directions
@@ -192,7 +192,7 @@ def drag_acceleration(state7, surface_area, mass):
     # print(f'drag force: {F_drag}') # for debugging
     return a_drag
 
-def two_body_equations_with_drag(t, state7, mu, surface_area, mass):
+def two_body_equations_with_drag(t, state7, surface_area, mass, mu=398600.4418):
     """
     Computes the state derivatives for a two-body problem with atmospheric drag.
 
@@ -200,9 +200,9 @@ def two_body_equations_with_drag(t, state7, mu, surface_area, mass):
         t (float): The current time (not used in this implementation, but necessary for ode solvers).
         state7 (list): The current state vector [time, x, y, z, vx, vy, vz], where time is flight time in seconds, (x, y, z) are the position coordinates in kilometers,
                       and (vx, vy, vz) are the velocity components in kilometers per second.
-        mu (float): The gravitational parameter (GM) of the central body (Earth) in km^3/s^2.
         surface_area (float): The surface area of the spacecraft in square meters.
         mass (float): The mass of the spacecraft in kilograms.
+        mu (float): The gravitational parameter (GM) of the central body (Earth) in km^3/s^2. The value is 3.986004418±0.000000008)x10^14 m3*s-2, hence default is 3.986004418x10^5 km3*s-2
 
     Returns:
         list: A list containing the derivatives [vx, vy, vz, ax, ay, az], where (ax, ay, az) are the accelerations in kilometers per second squared.
@@ -210,7 +210,7 @@ def two_body_equations_with_drag(t, state7, mu, surface_area, mass):
     x, y, z, vx, vy, vz = state7[1:] # skips time which is first element
     r = np.sqrt(x**2 + y**2 + z**2) # in km
     
-    # Gravitational acceleration
+    # Gravitational acceleration. Note that the negative sign was added since gravitational acceleration is in the opposite direction of the position vector.
     ax = -mu * x / r**3 # in km/s2
     ay = -mu * y / r**3 # in km/s2
     az = -mu * z / r**3 # in km/s2
@@ -222,10 +222,11 @@ def two_body_equations_with_drag(t, state7, mu, surface_area, mass):
     ax += a_drag[0] # in km/s2
     ay += a_drag[1] # in km/s2
     az += a_drag[2] # in km/s2
+    # print(f'ax: {ax:.3f}, ay: {ay:.3f}, az: {az:.3f},       ax_d: {a_drag[0]:.3f}, ay_d: {a_drag[1]:.3f}, az_d: {a_drag[2]:.3f}') # for debugging
 
     return [vx, vy, vz, ax, ay, az] # in km/s and km/s2
 
-def impact_condition(t, state6, mu, surface_area, mass):
+def impact_condition(t, state6, surface_area, mass):
     """
     Event function to detect when the spacecraft impacts the Earth's surface.
 
@@ -247,7 +248,7 @@ def impact_condition(t, state6, mu, surface_area, mass):
     state7 = [t] + list(state6) # reconstruct state7 needed to get latitude to get earth radius
     radius_earth = earth_radius_from_j2000(state7)
     difference = r - radius_earth
-    # print(f'Time: {t}, Radial Distance: {r}, Earth Radius: {radius_earth}, Difference: {difference}, x: {x}, y: {y}, z: {z}, vx: {vx}, vy: {vy}, vz: {vz}') # for debugging
+    print(f'Time: {t:.1f}, Radial Distance: {r:.1f}, Earth Radius: {radius_earth:.1f}, Difference: {difference:.3f}, x: {x:.3f}, y: {y:.3f}, z: {z:.3f}, vx: {vx:.3f}, vy: {vy:.3f}, vz: {vz:.3f},') # for debugging
     # Return a thresholded condition for triggering impact
     # if np.any(np.isnan(state6)) or np.any(np.isinf(state6)):
     #     print("NaN or Inf detected in state6!")
@@ -288,25 +289,27 @@ def propagate_trajectory_with_drag(event_name, surface_area, mass, trajectory_as
     t_span = (flight_time, flight_time + 3600 * 24)  # Propagate for up to 24 hours
 
     # Wrapper function for two_body_equations_with_drag to add time back into state7
-    def two_body_equations_with_drag_wrapper(t, state6, mu, surface_area, mass):
+    def two_body_equations_with_drag_wrapper(t, state6, surface_area, mass):
         # Rebuild state7 by adding the time component (t) back
         state7 = [t] + list(state6)
-        return two_body_equations_with_drag(t, state7, mu, surface_area, mass)
-
+        return two_body_equations_with_drag(t, state7, surface_area, mass)
     # Set up the propagation with drag using state6 (6 elements) for solve_ivp
     sol = solve_ivp(two_body_equations_with_drag_wrapper, t_span, state6, 
-                    args=(mu_earth, surface_area, mass),
-                    events=impact_condition, method='RK45', rtol=1e-7, atol=1e-7)
+                    args=(surface_area, mass),
+                    events=impact_condition, method='DOP853', rtol=1e-17, atol=1e-13)
 
     # Save the results to a new CSV file
     with open(output_filename, 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['Time (s)', 'X (km)', 'Y (km)', 'Z (km)', 'Vx (km/s)', 'Vy (km/s)', 'Vz (km/s)'])
+        # for solve_ivp
         for i in range(len(sol.t)):
             writer.writerow([sol.t[i], sol.y[0, i], sol.y[1, i], sol.y[2, i], sol.y[3, i], sol.y[4, i], sol.y[5, i]])
+        # for PyDSTool
+        # for row in sol:
+        #         writer.writerow([row['t'], row['x'], row['y'], row['z'], row['vx'], row['vy'], row['vz']])
 
     print(f"Propagation complete. Results saved to {output_filename}")
-
 
 # # Example usage S1-S2
 # event_name = 's1s2_separation'  # Define the event name you want to propagate from
