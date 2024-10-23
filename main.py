@@ -29,6 +29,7 @@ from functions_def import *
 from impact_with_drag_propagator import propagate_trajectory_with_drag # propagate stage trajectories into csv
 from existing_trajectory_loader import trajectory_from_excel_to_csv # export existing trajectory csv
 from csv_to_kml import read_and_convert # export kml from csv
+from csv_to_kml_visibility_distance import read_and_convert_visibility
 import os # for file pathing
 
 file_path = '/home/fabiomeloni/flight_safety/traiettoria.xlsx'
@@ -212,3 +213,6 @@ for event_name in event_names:
     csv_filenames.append(csv_filename)
 for event_name, csv_filename in zip(event_names, csv_filenames):
     read_and_convert(csv_filename, event_name, trajectory_astos_name=astos_name)
+    read_and_convert_visibility(csv_filename, event_name, trajectory_astos_name=astos_name, time_interval=30)
+
+
