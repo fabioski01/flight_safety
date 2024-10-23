@@ -1,23 +1,17 @@
 """
-This Python script is designed to convert spacecraft trajectory data from Cartesian coordinates in the 
-J2000 reference frame to geographic coordinates. It processes state vectors stored in a CSV file, 
+This Python script is designed to processe state vectors stored in a CSV file, 
 transforming them into a KML format for visualization in mapping applications.
 
 Key features include:
-- Conversion of Cartesian coordinates to geographic coordinates (latitude, longitude, altitude) using 
-astropy's coordinate transformations.
 - Generation of KML files that include trajectory paths, impact points, and separation points for 
 various events.
 - Handling of atmospheric corrections and adjustments for geographical coordinates based on launch pad
-locations.
+locations (to be implemented).
 
-The script uses several libraries, including astropy for astronomical calculations, lxml for 
-XML handling, and pykml for KML file generation. 
+The script uses several libraries, including lxml for XML handling, and pykml for KML file generation. 
 Functions defined within the script include:
-- `convert_j2000_to_geographic`: Transforms J2000 Cartesian coordinates into geographic coordinates.
-- `convert_seconds_to_iso`: Converts time from seconds since the J2000 epoch to ISO 8601 format.
 - `save_kml_output`: Generates and saves KML output for trajectory visualization.
-- `read_and_convert`: Reads state vectors from a CSV file, processes them, and invokes KML output generation.
+- `read_and_convert_visibility`: Reads state vectors from a CSV file, processes them, and invokes KML output generation with visibility circles.
 
 The script is intended for use in launch vehicle simulations, particularly to visualize trajectories and
 impact points and areas of spent rocket stages and other components.
@@ -105,8 +99,8 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name, trajectory_ast
     threshold = 1.0  # Define an acceptable tolerance (e.g., 1 second)
     next_target_time = time_interval  # Initialize next target time
     for i in range(len(times)):
-        if times[i] > 300:
-            break
+        # if times[i] > 300: # this is to avoid circles after 300s into flight. Without this, many circles of radius=0 are plotted
+        #     break
         # if times[i] < 100:
         #     next_target_time = time_interval/2
         # else:
@@ -114,7 +108,7 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name, trajectory_ast
         if abs(times[i] - target_time) < threshold:  # If the time is close to the target time
             altitude = altitudes_relative_to_ground[i]
             visibility_radius = calculate_visibility_radius(altitude)  # Get the visibility radius
-            print(f"Plotting visibility circle at t={times[i]} with radius r={visibility_radius} at h={altitudes_relative_to_ground[i]}")
+            # print(f"Plotting visibility circle at t={times[i]} with radius r={visibility_radius} at h={altitudes_relative_to_ground[i]}") # debugging
             target_time = next_target_time  # Update to the next target interval
             next_target_time += time_interval  # Increment the target time for the next interval
 
@@ -173,10 +167,11 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name, trajectory_ast
 
     print(f'KML file of {event_name} exported to {output_file}')
 
-def read_and_convert(csv_filename, event_name, trajectory_astos_name, time_interval=30):
+def read_and_convert_visibility(csv_filename, event_name, trajectory_astos_name, time_interval=30):
     """
     Propagates the trajectory from a CSV file containing state vectors, converts the coordinates
     from J2000 to geographic coordinates, and saves the results in a KML format.
+    Plots visibility circles in the first phase of the trajectory, to show where observers from ground can see the launch.
 
     Args:
         csv_filename (str): The name of the CSV file containing the state vectors (time, x, y, z).
@@ -224,4 +219,4 @@ def read_and_convert(csv_filename, event_name, trajectory_astos_name, time_inter
 
 
 # Example usage with a different time interval (e.g., 60 seconds)
-read_and_convert("state_vector_full_trajectory.csv", "full_trajectory", "traiettoria", time_interval=30)
+read_and_convert_visibility("state_vector_full_trajectory.csv", "full_trajectory", "traiettoria", time_interval=30)
