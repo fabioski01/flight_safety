@@ -1,21 +1,15 @@
 """
-This Python script is designed to convert spacecraft trajectory data from Cartesian coordinates in the 
-J2000 reference frame to geographic coordinates. It processes state vectors stored in a CSV file, 
+This Python script is designed to processe state vectors stored in a CSV file, 
 transforming them into a KML format for visualization in mapping applications.
 
 Key features include:
-- Conversion of Cartesian coordinates to geographic coordinates (latitude, longitude, altitude) using 
-astropy's coordinate transformations.
 - Generation of KML files that include trajectory paths, impact points, and separation points for 
 various events.
 - Handling of atmospheric corrections and adjustments for geographical coordinates based on launch pad
-locations.
+locations (to be implemented).
 
-The script uses several libraries, including astropy for astronomical calculations, lxml for 
-XML handling, and pykml for KML file generation. 
+The script uses several libraries, including lxml for XML handling, and pykml for KML file generation. 
 Functions defined within the script include:
-- `convert_j2000_to_geographic`: Transforms J2000 Cartesian coordinates into geographic coordinates.
-- `convert_seconds_to_iso`: Converts time from seconds since the J2000 epoch to ISO 8601 format.
 - `save_kml_output`: Generates and saves KML output for trajectory visualization.
 - `read_and_convert`: Reads state vectors from a CSV file, processes them, and invokes KML output generation.
 
