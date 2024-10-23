@@ -440,7 +440,7 @@ def save_state_vectors_to_csv(output_csv_path):
 
     print(f"All state vectors saved to {output_csv_path}")
 
-def calculate_visibility_radius(altitude, r_earth=6371e3, max_visibility_radius=700e3, max_visibility_altitude=150e3):
+def calculate_visibility_radius(altitude, r_earth=6371e3, max_visibility_radius=700e3, max_visibility_altitude=101e3):
     """
     Calculates the visibility radius based on the given altitude. Has constraints of maximum visibility radius and altitude.
     Might need enhancing in the future.
