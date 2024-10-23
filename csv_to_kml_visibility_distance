@@ -101,11 +101,22 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name, trajectory_ast
     )
 
     # Add visibility circles at the specified interval
+    target_time = 0  # Start at time 0
+    threshold = 1.0  # Define an acceptable tolerance (e.g., 1 second)
+    next_target_time = time_interval  # Initialize next target time
     for i in range(len(times)):
-        if abs(times[i] % time_interval) < 1e+0:  # Allow a small tolerance, and check if time matches the interval
-            print(f"Plotting visibility circle at t={times[i]}")  # Debugging
+        if times[i] > 300:
+            break
+        # if times[i] < 100:
+        #     next_target_time = time_interval/2
+        # else:
+        #     next_target_time = time_interval
+        if abs(times[i] - target_time) < threshold:  # If the time is close to the target time
             altitude = altitudes_relative_to_ground[i]
             visibility_radius = calculate_visibility_radius(altitude)  # Get the visibility radius
+            print(f"Plotting visibility circle at t={times[i]} with radius r={visibility_radius} at h={altitudes_relative_to_ground[i]}")
+            target_time = next_target_time  # Update to the next target interval
+            next_target_time += time_interval  # Increment the target time for the next interval
 
             # Add a circle representing visibility radius
             kml_doc.Document.append(
@@ -113,12 +124,13 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name, trajectory_ast
                     KML.name(f"Visibility Radius at t={times[i]}s"),
                     KML.Style(
                         KML.LineStyle(
-                            KML.color("ff00ff00"),  # Outline color (green)
-                            KML.width(2)
+                            KML.color("ff007fff"),  # Outline color (ff00ff00 green, ff007fff orange, 80ffff00  yellow at 50% opacity)
+                            KML.width(1)
                         ),
                         KML.PolygonStyle(
-                            KML.color("7f00ff00"),  # Fill color (semi-transparent green)
-                            KML.outline(True)       # Enable outline for polygon
+                            KML.color("80ffff00"),  # Fill color (7f00ff00 green, 00ffffff no fill, 80ffff00  yellow at 50% opacity)
+                            # etree.Element("fill").text = "0",  # Insert <fill>0</fill> # Enable/disable fill
+                            KML.outline(True)       # Enable/disable outline
                         )
                     ),
                     KML.Polygon(
@@ -136,8 +148,26 @@ def save_kml_output(latitudes, longitudes, altitudes, event_name, trajectory_ast
                 )
             )
 
+            # Add a marker at the center of the circle with the time in seconds
+            kml_doc.Document.append(
+                KML.Placemark(
+                    KML.name(f"{times[i]:.1f}s"),  # Format the time to one decimal place
+                    KML.Point(
+                        KML.altitudeMode("relativeToGround"),  # Set altitude mode
+                        KML.coordinates(f"{longitudes[i]},{latitudes[i]},{altitudes[i]}")  # Center coordinates and altitude
+                    ),
+                    KML.Style(
+                        KML.IconStyle(
+                            KML.Icon(
+                                KML.href("http://maps.google.com/mapfiles/kml/shapes/placemark_square.png")  # Optional: You can change this to a different icon if needed
+                            )
+                        )
+                    )
+                )
+            )
+
     # Save to KML file in the 'kml_files' directory
-    output_file = output_folder / f"kml_trajectory_{event_name}.kml"
+    output_file = output_folder / f"kml_trajectory_visibility_{event_name}.kml"
     with open(output_file, "wb") as kml_file:
         kml_file.write(etree.tostring(kml_doc, pretty_print=True, xml_declaration=True, encoding='UTF-8'))
 
@@ -194,4 +224,4 @@ def read_and_convert(csv_filename, event_name, trajectory_astos_name, time_inter
 
 
 # Example usage with a different time interval (e.g., 60 seconds)
-read_and_convert("state_vector_full_trajectory.csv", "full_trajectory", "traiettoria", time_interval=60)
+read_and_convert("state_vector_full_trajectory.csv", "full_trajectory", "traiettoria", time_interval=30)
